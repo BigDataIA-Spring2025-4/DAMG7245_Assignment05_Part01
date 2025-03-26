@@ -31,6 +31,12 @@ serpapi_params = {
     "engine": "google",  # Specifies Google Search Engine
 }
 
+@tool("vector_search")
+def vector_search(query: str):
+    """Searches for the most relevant vector in the Pinecone index."""
+    
+    return ""
+
 @tool("web_search")
 def web_search(query: str):
     """Finds general knowledge information using Google search. Can also be used

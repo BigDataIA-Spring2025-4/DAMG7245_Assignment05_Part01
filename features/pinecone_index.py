@@ -83,9 +83,11 @@ def query_pinecone(query: str, top_k: int = 10, year: str = None, quarter: list 
     filter_conditions = {}
     if year is not None:
         filter_conditions["year"] = {"$eq": year}
-    if quarter:
-        filter_conditions["quarter"] = {"$in": quarter}
-        
+    if quarter is not None:
+        if len(quarter) > 0:
+            print(quarter)
+            filter_conditions["quarter"] = {"$in": quarter}
+    print(filter_conditions)
     results = index.query(
         namespace=f"nvdia_quarterly_reports",
         vector=dense_vector,  # Dense vector embedding
@@ -101,7 +103,7 @@ def query_pinecone(query: str, top_k: int = 10, year: str = None, quarter: list 
         print("=================================================================================")
     return responses
 
-def insert_into_pinecone():
+def insert_data_into_pinecone():
     base_path = "nvidia"
     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
     
@@ -130,9 +132,9 @@ def insert_into_pinecone():
 def main():
     query = "What is the revenue of Nvidia?"
     year = "2025"
-    quarter = []
-    top_k = 5
-    responses = query_pinecone(query, top_k, year, quarter)
+    quarter = ['Q4', 'Q1']
+    top_k = 10
+    responses = query_pinecone(query, top_k, year = year, quarter = None)
     print(f"Top {top_k} responses for the query '{query}' are:")
     for i, response in enumerate(responses):
         print(f"{i+1}. {response}")
