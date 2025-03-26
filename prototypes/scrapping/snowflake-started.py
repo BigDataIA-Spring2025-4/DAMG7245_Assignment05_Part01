@@ -70,10 +70,8 @@ valuation_data = {
     "EV_EBITDA": data.get("enterpriseToEbitda", None)
 }
 
-# Convert to DataFrame
 valuation_data_df = pd.DataFrame([valuation_data])
 
-# Table creation IF NOT EXISTS (execute once)
 create_table_sql = f"""
 CREATE TABLE IF NOT EXISTS {required_env_vars['SNOWFLAKE_SCHEMA']}.NVIDIA_VALUATION (
     "Market_Cap_intraday" FLOAT,
