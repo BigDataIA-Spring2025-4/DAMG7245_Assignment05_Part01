@@ -6,7 +6,7 @@ import operator
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from langgraph.graph import StateGraph, END
-
+from langchain_core.tools import tool
 from langchain_core.messages import ToolCall, ToolMessage
 from langchain_openai import ChatOpenAI
 
@@ -120,6 +120,29 @@ tools=[
     final_answer
 ]
 
+def create_scratchpad(intermediate_steps: list[AgentAction]):
+    research_steps = []
+    for i, action in enumerate(intermediate_steps):
+        if action.log != "TBD":
+            # this was the ToolExecution
+            research_steps.append(
+                f"Tool: {action.tool}, input: {action.tool_input}\n"
+                f"Output: {action.log}"
+            )
+    return "\n---\n".join(research_steps)
+
+oracle = (
+    {
+        "input": lambda x: x["input"],
+        "chat_history": lambda x: x["chat_history"],
+        "scratchpad": lambda x: create_scratchpad(
+            intermediate_steps=x["intermediate_steps"]
+        ),
+    }
+    | prompt
+    | llm.bind_tools(tools, tool_choice="any")
+)
+
 ## Router and Parent Agent functions
 def run_oracle(state: list):
     print("run_oracle")
@@ -167,25 +190,40 @@ def run_tool(state: list):
 
 
 ## Langraph - Designing the Graph
-graph = StateGraph(AgentState)
+def create_graph(tool_keys):
+    tool_str_to_func = {
+    "web_search": web_search,
+    "final_answer": final_answer
+}
+    
+    tools = [final_answer]
+    for val in tool_keys:
+        tools.append(tool_str_to_func[val])
 
-graph.add_node("oracle", run_oracle)
-graph.add_node("web_search", run_tool)
-graph.add_node("final_answer", run_tool)
+    graph = StateGraph(AgentState)
 
-graph.set_entry_point("oracle")
+    graph.add_node("oracle", run_oracle)
+    graph.add_node("web_search", run_tool)
+    graph.add_node("final_answer", run_tool)
 
-graph.add_conditional_edges(
-    source="oracle",  # where in graph to start
-    path=router,  # function to determine which node is called
-)
+    graph.set_entry_point("oracle")
 
-# create edges from each tool back to the oracle
-for tool_obj in tools:
-    if tool_obj.name != "final_answer":
-        graph.add_edge(tool_obj.name, "oracle")
+    graph.add_conditional_edges(
+        source="oracle",  # where in graph to start
+        path=router,  # function to determine which node is called
+    )
 
-# if anything goes to final answer, it must then move to END
-graph.add_edge("final_answer", END)
+    # create edges from each tool back to the oracle
+    for tool_obj in tools:
+        if tool_obj.name != "final_answer":
+            graph.add_edge(tool_obj.name, "oracle")
 
-runnable = graph.compile()
+    # if anything goes to final answer, it must then move to END
+    graph.add_edge("final_answer", END)
+
+    runnable = graph.compile()
+    return runnable
+
+def run_agents():
+    runnable = create_graph()
+    return runnable
