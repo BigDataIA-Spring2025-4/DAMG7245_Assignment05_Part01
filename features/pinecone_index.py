@@ -75,12 +75,12 @@ def create_pinecone_vector_store(file, chunks):
 def upsert_vectors(index, vectors):
     index.upsert(vectors=vectors, namespace=f"nvdia_quarterly_reports")
 
-def query_pinecone(parser, chunking_strategy, query, top_k=20, year = None, quarter = None):
+def query_pinecone(query : str, top_k : int = 10, year : str = None, quarter : list = None):
     # Search the dense index and rerank the results
     index = connect_to_pinecone_index()
     dense_vector = get_embedding(query)
     results = index.query(
-        namespace=f"{parser}_{chunking_strategy}",
+        namespace=f"nvdia_quarterly_reports",
         vector=dense_vector,  # Dense vector embedding
         filter={
             "year": {"$eq": year},
@@ -97,16 +97,9 @@ def query_pinecone(parser, chunking_strategy, query, top_k=20, year = None, quar
         print("=================================================================================")
     return responses
 
-
-def main():
-    print("Hello, World!")
-
-
-if __name__ == "__main__":
-    # Load the OpenAI API key from the environment
+def insert_into_pinecone():
     base_path = "nvidia"
     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
-    # files = list({file for file in s3_obj.list_files() if file.endswith('.md')})
     
     year = ['2021', '2022', '2023', '2024', '2025']
     quarter = ['Q1', 'Q2', 'Q3', 'Q4']
@@ -124,10 +117,14 @@ if __name__ == "__main__":
                     print("Successfully chunked the content")
                     print("Creating Pinecone vector store")
                     create_pinecone_vector_store(file, chunks)
-                # create_pinecone_vector_store(file, chunks, "semantic")
-    # for file in files:
-    #     print(file)
-    # print(len(files))
+                    print(f"Successfully inserted into Pinecone Vector Store for {y}-{q}")
+                    
+def main():
+    query = "What is the revenue of Nvidia in Q1 2021?"
+    
+
+
+if __name__ == "__main__":
 
     main()
     
