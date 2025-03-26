@@ -75,17 +75,21 @@ def create_pinecone_vector_store(file, chunks):
 def upsert_vectors(index, vectors):
     index.upsert(vectors=vectors, namespace=f"nvdia_quarterly_reports")
 
-def query_pinecone(query : str, top_k : int = 10, year : str = None, quarter : list = None):
+def query_pinecone(query: str, top_k: int = 10, year: str = None, quarter: list = None):
     # Search the dense index and rerank the results
     index = connect_to_pinecone_index()
     dense_vector = get_embedding(query)
+    
+    filter_conditions = {}
+    if year is not None:
+        filter_conditions["year"] = {"$eq": year}
+    if quarter:
+        filter_conditions["quarter"] = {"$in": quarter}
+        
     results = index.query(
         namespace=f"nvdia_quarterly_reports",
         vector=dense_vector,  # Dense vector embedding
-        filter={
-            "year": {"$eq": year},
-            "quarter": {"$in": quarter},
-        },  # Sparse keyword match
+        filter=filter_conditions if filter_conditions else None,  # Sparse keyword match
         top_k=top_k,
         include_metadata=True,  # Include chunk text
     )
@@ -118,13 +122,22 @@ def insert_into_pinecone():
                     print("Creating Pinecone vector store")
                     create_pinecone_vector_store(file, chunks)
                     print(f"Successfully inserted into Pinecone Vector Store for {y}-{q}")
+                else:
+                    print(f"Failed to chunk content for {y}-{q}")
+            else:
+                print(f"Failed to extract content for {y}-{q}")
                     
 def main():
-    query = "What is the revenue of Nvidia in Q1 2021?"
-    
-
+    query = "What is the revenue of Nvidia?"
+    year = "2025"
+    quarter = []
+    top_k = 5
+    responses = query_pinecone(query, top_k, year, quarter)
+    print(f"Top {top_k} responses for the query '{query}' are:")
+    for i, response in enumerate(responses):
+        print(f"{i+1}. {response}")
+        print("=================================================================================")
 
 if __name__ == "__main__":
-
     main()
     
