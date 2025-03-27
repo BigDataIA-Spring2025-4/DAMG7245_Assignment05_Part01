@@ -146,23 +146,3 @@ def financials_data(ticker):
     """
     snowflake_pandaspush(create_table_sql, fin, table_name, reset_index_flag=False)
     return fin
-
-def main():
-    ticker = 'NVDA'
-    period = "5y"
-    hist_data = historical_data(ticker, period)
-    print(f"\nLoaded historical data from {period}:")
-    print(hist_data.head())
-    bs_data = balance_sheet_data(ticker)
-    print(f"\nLoaded balance sheet data for {ticker}:")
-    print(bs_data.head())
-    print("\nColumns in balance sheet data:")
-    fs_data = financials_data(ticker)
-    print(fs_data) 
-
-if __name__ == "__main__":
-    main()
-
-
-
-
