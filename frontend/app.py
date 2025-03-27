@@ -11,7 +11,7 @@ AIRFLOW_API_URL =os.getenv("AIRFLOW_API_URL")
 API_URL = "http://127.0.0.1:8000"
 
 agents = {
-    "Snowflake Agent": "snowflake",
+    "Snowflake Agent": "snowflake_agent",
     "RAG Agent": "vector_search",
     "Web Search Agent": "web_search",
 }
