@@ -8,10 +8,12 @@ load_dotenv()
 API_URL=os.getenv("API_URL")
 AIRFLOW_API_URL =os.getenv("AIRFLOW_API_URL")
 
+API_URL = "http://127.0.0.1:8000"
+
 agents = {
     "Snowflake Agent": "snowflake",
-    "RAG Agent": "rag_search",
-    "Snowflake": "web_search",
+    "RAG Agent": "vector_search",
+    "Web Search Agent": "web_search",
 }
 
 if 'messages' not in st.session_state:
@@ -49,9 +51,12 @@ def main():
     if task == "Trigger Airflow":
         trigger_airflow_dag()
     elif task == "NVIDIA Research":
-        year = str(st.sidebar.multiselect('Year', ["2025", "2024", "2023", "2022", '2021', ''], default=['']))
-        quarter = st.sidebar.multiselect('Quarter:', ["Q1", "Q2", "Q3", "Q4", ''], default=[''])
-        agent_selections = st.sidebar.multiselect('Agents:', list(agents.keys()), default=list(agents.values()))
+        year = str(st.sidebar.multiselect('Year', ["2025", "2024", "2023", "2022", '2021', ''], default=None))
+        quarter = st.sidebar.multiselect('Quarter:', ["Q1", "Q2", "Q3", "Q4", ''], default=None)
+        agent_selections = st.sidebar.multiselect('Agents:', list(agents.keys()), default=["Web Search Agent"])
+        selected_agents = []
+        for key in agent_selections:
+            selected_agents.append(agents[key])
 
         st.sidebar.text("Enter query here:")
         query = st.sidebar.chat_input(placeholder = "Write your query here...")
@@ -70,7 +75,7 @@ def main():
                                 "year": year,
                                 "quarter": quarter,
                                 "query": query,
-                                "tools": agent_selections
+                                "tools": selected_agents
                             }
                         )
                         if response.status_code == 200:
@@ -121,44 +126,11 @@ def convert_PDF_to_markdown(file_upload, parser):
         except:
             st.error("An error occurred while processing the PDF.")
     
-
-def generate_query_response(markdown_content, query, parser, chunk_strategy, vector_store):
-    # st.session_state.messages.clear()
-    st.session_state.messages.append({"role": "user", "content": query})
-    with st.chat_message("user"):
-        st.markdown(query)
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            try:
-                # time.sleep(2)
-                response = requests.post(
-                    f"{API_URL}/query_document",
-                    json={
-                        "parser": parser,
-                        "chunk_strategy": chunk_strategy,
-                        "vector_store": vector_store,
-                        "markdown_content": markdown_content,
-                        "query": query,
-                    }
-                )
-                if response.status_code == 200:
-                    answer = response.json()["answer"]
-                    st.session_state.messages.append({"role": "assistant", "content": answer})
-                    # st.markdown(answer)
-                    return answer
-                else:
-                    error_message = f"Error: {response.text}"
-                    st.error(error_message)
-                    st.session_state.messages.append({"role": "assistant", "content": error_message})
-            except Exception as e:
-                error_message = f"Error: {str(e)}"
-                # st.error(error_message)
-                st.session_state.messages.append({"role": "assistant", "content": error_message})
     
 if __name__ == "__main__":
 # Set page configuration
     st.set_page_config(
-        page_title="NVDIA Financial Report Analysis",
+        page_title="Research NVDIA",
         layout="wide",
         initial_sidebar_state="expanded"
     )    
