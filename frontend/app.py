@@ -51,7 +51,7 @@ def main():
     if task == "Trigger Airflow":
         trigger_airflow_dag()
     elif task == "NVIDIA Research":
-        year = str(st.sidebar.multiselect('Year', ["2025", "2024", "2023", "2022", '2021', ''], default=None))
+        year = str(st.sidebar.selectbox('Year', ["2025", "2024", "2023", "2022", '2021']))
         quarter = st.sidebar.multiselect('Quarter:', ["Q1", "Q2", "Q3", "Q4", ''], default=None)
         agent_selections = st.sidebar.multiselect('Agents:', list(agents.keys()), default=["Web Search Agent"])
         selected_agents = []

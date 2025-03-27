@@ -16,7 +16,7 @@ from functools import partial
 import os
 from dotenv import load_dotenv
 
-from pinecone_index import query_pinecone
+from features.pinecone_index import query_pinecone
 
 load_dotenv()
 
@@ -38,11 +38,12 @@ class AgentState(TypedDict):
 @tool("vector_search")
 def vector_search(query: str, year: str = None, quarter: list = None):
     """Searches for the most relevant vector in the Pinecone index."""
-    query = "What is the revenue of Nvidia?"
-    year = "2025"
-    quarter = ['Q4', 'Q1']
+    # query = "What is the revenue of Nvidia?"
+    # year = "2025"
+    # quarter = ['Q4', 'Q1']
+    print("Reached Vector search 1")
     top_k = 10
-    chunks = query_pinecone(query, top_k, year = year, quarter = None)
+    chunks = query_pinecone(query, top_k, year = year, quarter = quarter)
     contexts = "\n---\n".join(
         {chr(10).join([f'Chunk {i+1}: {chunk}' for i, chunk in enumerate(chunks)])}
     )
@@ -102,6 +103,7 @@ def final_answer(
 def init_research_agent(tool_keys, year=None, quarter=None):
     tool_str_to_func = {
             "web_search": web_search,
+            "vector_search": vector_search,
             "final_answer": final_answer
         }
     
@@ -195,9 +197,10 @@ def router(state: AgentState):
 
 def run_tool(state: AgentState):
     tool_str_to_func = {
-        "web_search": web_search,
-        "final_answer": final_answer
-    }
+            "web_search": web_search,
+            "vector_search": vector_search,
+            "final_answer": final_answer
+        }
     # use this as helper function so we repeat less code
     tool_name = state["intermediate_steps"][-1].tool
     tool_args = state["intermediate_steps"][-1].tool_input
@@ -225,6 +228,7 @@ def run_tool(state: AgentState):
 ## Langraph - Designing the Graph
 def create_graph(research_agent, year=None, quarter=None):
     tools=[
+        vector_search,
         web_search,
         final_answer
     ]
@@ -234,13 +238,14 @@ def create_graph(research_agent, year=None, quarter=None):
     # Pass state to all functions that require it
     graph.add_node("oracle", partial(run_oracle, oracle=research_agent))
     graph.add_node("web_search", run_tool)
+    graph.add_node("vector_search", run_tool)
     graph.add_node("final_answer", run_tool)
 
     graph.set_entry_point("oracle")
 
     graph.add_conditional_edges(
-        source="oracle",  # where in graph to start
-        path=router,  # function to determine which node is called
+        source="oracle",
+        path=router,
     )
 
     # create edges from each tool back to the oracle

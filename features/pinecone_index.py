@@ -1,10 +1,10 @@
 import openai, os
 from pinecone import Pinecone, ServerlessSpec
 from dotenv import load_dotenv
-from chunk_strategy import semantic_chunking
+from features.chunk_strategy import semantic_chunking
 load_dotenv()
 
-from services.s3 import S3FileManager
+# from services.s3 import S3FileManager
 
 # Initialize Pinecone
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -103,31 +103,31 @@ def query_pinecone(query: str, top_k: int = 10, year: str = None, quarter: list 
         print("=================================================================================")
     return responses
 
-def insert_data_into_pinecone():
-    base_path = "nvidia"
-    s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
+# def insert_data_into_pinecone():
+#     base_path = "nvidia"
+#     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
     
-    year = ['2021', '2022', '2023', '2024', '2025']
-    quarter = ['Q1', 'Q2', 'Q3', 'Q4']
+#     year = ['2021', '2022', '2023', '2024', '2025']
+#     quarter = ['Q1', 'Q2', 'Q3', 'Q4']
     
-    for y in year:
-        for q in quarter:
-            file = f"{base_path}/{y}/{q}/mistral/extracted_data.md"
-            print(f"Reading file for {y}-{q}")
-            content = read_markdown_file(file, s3_obj)
-            if len(content) != 0:
-                print(f"Successfully read file for {y}-{q}")
-                print("Implementing semantic chunking")
-                chunks = semantic_chunking(content, max_sentences=10)
-                if len(chunks) != 0:
-                    print("Successfully chunked the content")
-                    print("Creating Pinecone vector store")
-                    create_pinecone_vector_store(file, chunks)
-                    print(f"Successfully inserted into Pinecone Vector Store for {y}-{q}")
-                else:
-                    print(f"Failed to chunk content for {y}-{q}")
-            else:
-                print(f"Failed to extract content for {y}-{q}")
+#     for y in year:
+#         for q in quarter:
+#             file = f"{base_path}/{y}/{q}/mistral/extracted_data.md"
+#             print(f"Reading file for {y}-{q}")
+#             content = read_markdown_file(file, s3_obj)
+#             if len(content) != 0:
+#                 print(f"Successfully read file for {y}-{q}")
+#                 print("Implementing semantic chunking")
+#                 chunks = semantic_chunking(content, max_sentences=10)
+#                 if len(chunks) != 0:
+#                     print("Successfully chunked the content")
+#                     print("Creating Pinecone vector store")
+#                     create_pinecone_vector_store(file, chunks)
+#                     print(f"Successfully inserted into Pinecone Vector Store for {y}-{q}")
+#                 else:
+#                     print(f"Failed to chunk content for {y}-{q}")
+#             else:
+#                 print(f"Failed to extract content for {y}-{q}")
                     
 def main():
     query = "What is the revenue of Nvidia?"
