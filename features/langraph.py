@@ -16,6 +16,10 @@ from functools import partial
 import os
 from dotenv import load_dotenv
 
+from pinecone_index import query_pinecone
+
+load_dotenv()
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 
@@ -30,6 +34,19 @@ class AgentState(TypedDict):
     quarter: Optional[List]
 
 
+
+@tool("vector_search")
+def vector_search(query: str, year: str = None, quarter: list = None):
+    """Searches for the most relevant vector in the Pinecone index."""
+    query = "What is the revenue of Nvidia?"
+    year = "2025"
+    quarter = ['Q4', 'Q1']
+    top_k = 10
+    chunks = query_pinecone(query, top_k, year = year, quarter = None)
+    contexts = "\n---\n".join(
+        {chr(10).join([f'Chunk {i+1}: {chunk}' for i, chunk in enumerate(chunks)])}
+    )
+    return contexts
 
 @tool("web_search")
 def web_search(query: str):
