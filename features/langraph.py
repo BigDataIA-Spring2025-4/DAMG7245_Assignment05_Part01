@@ -67,21 +67,31 @@ def web_search(query: str):
         ["\n".join([x["title"], x["snippet"], x["link"]]) for x in results]
     )
     return contexts
-
 @tool("snowflake_agent")
 def snowflake_agent(query: str):
-    """Generate a textual summary comparing Nvidia's stock performance over the past year, including its financial 
-    health and market trends. Also, provide a valuation analysis based on the data retrieved.
-
-    Prompt : We have 1 tables -
-    Table FRED_DB.FRED_SCHEMA.NVDA_HISTORICAL_5Y = [TICKER VARCHAR(10),DATE DATE,OPEN FLOAT,HIGH FLOAT,LOW FLOAT,CLOSE FLOAT,VOLUME FLOAT,DIVIDENDS FLOAT,STOCKSPLITS FLOAT]
-    
-    Create a query to identify data form specified year and quater  
     """
-    # Snowflake Agent Tool
-    contexts = snowflake_pandaspull()
+    This agent queries the Snowflake table FRED_DB.FRED_SCHEMA.NVDA_HISTORICAL_5Y.
+    
+    The table schema is:
+      TICKER VARCHAR(10),
+      DATE DATE,
+      OPEN FLOAT,
+      HIGH FLOAT,
+      LOW FLOAT,
+      CLOSE FLOAT,
+      VOLUME FLOAT,
+      DIVIDENDS FLOAT,
+      STOCKSPLITS FLOAT
 
+    The function passes the query parameter directly to snowflake_pandaspull.
+    Provide the extact returned values from the snowflake_pandaspull dont elaborate or add any thing in the provided values.
+    """
+
+    contexts = snowflake_pandaspull(query)
+    
+    # Return the result
     return contexts
+
 
 
 # Final Research Output Tool
@@ -91,6 +101,7 @@ def final_answer(
     research_steps: list,
     main_body: str,
     conclusion: str,
+    snowflake_results : str,
     sources: list
 ):
     """Returns a natural language response to the user in the form of a research
@@ -104,6 +115,7 @@ def final_answer(
     long in length.
     - `conclusion`: this is a short single paragraph conclusion providing a
     concise but sophisticated view on what was found.
+    - `snowflake_results` : If you have used snowflake_agent give the output you got from snowflake_pandaspull
     - `sources`: a bulletpoint list provided detailed sources for all information
     referenced during the research process
     """
@@ -246,6 +258,7 @@ def create_graph(research_agent, year=None, quarter=None):
     tools=[
         vector_search,
         web_search,
+        snowflake_agent,
         final_answer
     ]
 

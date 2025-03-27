@@ -18,7 +18,7 @@ required_env_vars = {
     'SNOWFLAKE_SCHEMA': os.getenv('SNOWFLAKE_SCHEMA')
 }
 
-def snowflake_pandaspull():
+def snowflake_pandaspull(query):
     try:
         conn = snowflake.connector.connect(
             account=required_env_vars['SNOWFLAKE_ACCOUNT'],
@@ -35,8 +35,6 @@ def snowflake_pandaspull():
     except Exception as e:
         print(f"❌ Snowflake connection failed: {str(e)}")
     try:
-
-        query = "SELECT * FROM NVIDIA_VALUATION_V2;"
 
         df = pd.read_sql(query, conn)
         print(f"✅ Data fetched successfully from Snowflake.")
