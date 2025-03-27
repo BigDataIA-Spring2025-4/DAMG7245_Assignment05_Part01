@@ -9,9 +9,13 @@ from langgraph.graph import StateGraph, END
 from langchain_core.tools import tool
 from langchain_core.messages import ToolCall, ToolMessage
 from langchain_openai import ChatOpenAI
-
+from serpapi import GoogleSearch
 import os
 from dotenv import load_dotenv
+
+from pinecone_index import query_pinecone
+
+load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
@@ -30,6 +34,19 @@ serpapi_params = {
     "api_key": SERPAPI_KEY,  # <-- Add your SerpAPI key
     "engine": "google",  # Specifies Google Search Engine
 }
+
+@tool("vector_search")
+def vector_search(query: str, year: str = None, quarter: list = None):
+    """Searches for the most relevant vector in the Pinecone index."""
+    query = "What is the revenue of Nvidia?"
+    year = "2025"
+    quarter = ['Q4', 'Q1']
+    top_k = 10
+    chunks = query_pinecone(query, top_k, year = year, quarter = None)
+    contexts = "\n---\n".join(
+        {chr(10).join([f'Chunk {i+1}: {chunk}' for i, chunk in enumerate(chunks)])}
+    )
+    return contexts
 
 @tool("web_search")
 def web_search(query: str):
