@@ -12,6 +12,7 @@ mistralai
 openai
 pinecone
 snowflake-connector-python
+snowflake-connector-python[pandas]
 google-search-results
 langchain-openai
 langchain-community
