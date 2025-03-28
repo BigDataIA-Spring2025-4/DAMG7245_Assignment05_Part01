@@ -44,7 +44,7 @@ class AgentState(TypedDict):
     intermediate_steps: Annotated[list[tuple[AgentAction, str]], operator.add]
     year: Optional[str]
     quarter: Optional[List]
-
+    
 
 @tool("vector_search")
 def vector_search(query: str, year: str = None, quarter: list = None):
@@ -198,12 +198,17 @@ def init_research_agent(tool_keys, year=None, quarter=None):
     - Year: {year or 'Not specified'}
     - Quarter: {quarter or 'Not specified'}
 
-    Decice on the Tools usagae base usage based on the parameters, but use no tool more than three times.
+    Decice on the Tools usagae base usage based on the parameters
+    Rules:
+    - If a tool has been used with a particular query, do NOT use it again with the same query.
+    - Do NOT use any tool more than **twice** (especially `web_search`). If a tool has already been used twice in the scratchpad, avoid using it again.
+    - Collect information from a range of sources before providing a final answer.
+
     If you see that a tool has been used (in the scratchpad) with a particular
     query, do NOT use that same tool with the same query again. Also, do NOT use
     any tool more than twice (ie, if the tool appears in the scratchpad twice, do
     not use it again).
-
+    
     You should aim to collect information from a range of sources regarding NVIDIA before
     providing the answer to the user. Once you have collected the relevant information
     to answer the user's question (stored in the scratchpad) use the final_answer
@@ -265,6 +270,7 @@ def run_oracle(state: AgentState, oracle):
 
 def router(state: AgentState):
     # return the tool name to use
+    
     if isinstance(state["intermediate_steps"], list):
         return state["intermediate_steps"][-1].tool
     else:
