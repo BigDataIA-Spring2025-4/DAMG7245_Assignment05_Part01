@@ -7,7 +7,6 @@ from features.langraph import run_agents
 from dotenv import load_dotenv
 load_dotenv()
 
-
 from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
 
@@ -28,7 +27,7 @@ client = OpenAI()
 
 @app.get("/")
 def read_root():
-    return {"message": "NVDIA Financial Reports Analysis: FastAPI Backend with OpenAI Integration available for user queries..."}
+    return {"message": "Research NVIDIA With Agentic RAG"}
 
 
 @app.post("/query_research_agent")
@@ -57,74 +56,3 @@ def query_nvdia_documents(request: NVDIARequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error answering question: {str(e)}")
-    
-
-# def build_report(output: dict):
-#     research_steps = output["research_steps"]
-#     if type(research_steps) is list:
-#         research_steps = "\n".join([f"- {r}" for r in research_steps])
-#     sources = output["sources"]
-#     if type(sources) is list:
-#         sources = "\n".join([f"- {s}" for s in sources])
-#     return f"""
-# INTRODUCTION
-# ------------
-# {output["introduction"]}
-
-# RESEARCH STEPS
-# --------------
-# {research_steps}
-
-# REPORT
-# ------
-# {output["main_body"]}
-
-# CONCLUSION
-# ----------
-# {output["conclusion"]}
-
-# SOURCES
-# -------
-# {sources}
-# """
-# def dict_to_graph():
-#     for title, fig_json in report["financial_visualizations"].items():
-#         fig = go.Figure(fig_json)  # Reconstruct Plotly figure from JSON
-#         st.plotly_chart(fig)
-        
-# def build_report(output: dict):
-#     research_steps = output["research_steps"]
-#     if type(research_steps) is list:
-#         research_steps = "\n".join([f"- {r}" for r in research_steps])
-#     sources = output["sources"]
-#     if isinstance(sources, list):
-#         sources = "\n".join([f"- {s}" for s in sources])
-    
-#     report = f"""
-# COMPREHENSIVE RESEARCH REPORT
-# -----------------------------
-# RESEARCH STEPS
-# --------------
-# {research_steps}
-
-# HISTORICAL PERFORMANCE ANALYSIS
-# -------------------------------
-# {output["historical_performance"]}
-
-# FINANCIAL VALUATION METRICS
-# ---------------------------
-# {output["financial_analysis"]}
-
-# FINANCIAL VISUALIZATIONS
-# ------------------------
-# [Plotly visualizations would be rendered here in Streamlit]
-
-# REAL-TIME INDUSTRY INSIGHTS
-# ---------------------------
-# {output["industry_insights"]}
-
-# SOURCES
-# -------
-# {sources}
-# """
-#     return report

@@ -46,13 +46,12 @@ class AgentState(TypedDict):
     quarter: Optional[List]
 
 
-
 @tool("vector_search")
 def vector_search(query: str, year: str = None, quarter: list = None):
-    """Searches for the most relevant vector in the Pinecone index."""
-    # query = "What is the revenue of Nvidia?"
-    # year = "2025"
-    # quarter = ['Q4', 'Q1']
+    """
+    Searches for the most relevant chunks  in the Pinecone index, 
+    which has NVIDIA Quarterly data for the past 5 years.
+    """
     print("Reached Vector search 1")
     top_k = 10
     chunks = query_pinecone(query, top_k, year = year, quarter = quarter)
@@ -64,7 +63,8 @@ def vector_search(query: str, year: str = None, quarter: list = None):
 @tool("web_search")
 def web_search(query: str):
     """Finds general knowledge information using Google search. Can also be used
-    to augment more 'general' knowledge to a previous specialist query."""
+    to augment more 'general' knowledge to a previous specialist query.
+    """
     # Web Search Tool
     serpapi_params = {
         "api_key": SERPAPI_KEY,  # <-- Add your SerpAPI key
@@ -81,7 +81,42 @@ def web_search(query: str):
     )
     return contexts
 
+
+def format_result(result):
+    # Initialize an empty list to collect parts of the string
+    parts = []
+    
+    # Handle the 'data' key if present
+    if 'data' in result and result['data']:
+        parts.append("DATA:")
+        # Loop through each dictionary in the list
+        for i, item in enumerate(result['data'], start=1):
+            parts.append(f"Record {i}:")
+            # Loop through each key-value pair in the item (keys are dynamic)
+            for key, value in item.items():
+                parts.append(f"  {key.title()}: {value}")
+            parts.append("")  # Add a blank line between records
+    
+    # Handle the 'summary' key if present
+    if 'summary' in result:
+        parts.append("SUMMARY:")
+        # Remove extra whitespace if needed
+        summary = result['summary'].strip()
+        parts.append(summary)
+        parts.append("")
+    
+    # Handle the 'query' key if present
+    if 'analysis_type' in result:
+        parts.append("Analysis Type:")
+        # Remove extra whitespace if needed
+        analysis_type = result['analysis_type'].strip()
+        parts.append(analysis_type)
+    
+    # Join all parts into one string with newline characters
+    return "\n".join(parts)
 # LangGraph tool integration
+
+
 @tool("snowflake_query")
 def snowflake_query(
     query: str = None, 
@@ -90,9 +125,11 @@ def snowflake_query(
     quarter: List[str] = None
 ):
     """
-    LangGraph compatible Snowflake query tool
-    
-    Args match snowflake_query_agent function
+    This tool fetches the required summaries and tables from structured NVIDIA data stored in snowflake
+    queries table according to the query, year and quarters and returns, the table, data summary, analysis Type
+
+    Strictly choose from the list analysis_type = ['financial_summary', 'stock_performance', 'balance_sheet', 'earnings_analysis']
+
     """
     result = snowflake_query_agent(
         query=query, 
@@ -100,54 +137,19 @@ def snowflake_query(
         year=year, 
         quarter=quarter
     )
+
+    print("result 2:....->", format_result(result))
     
-    # Convert Plotly figures to JSON for transmission
-    if 'visualizations' in result:
-        result['visualizations'] = {
-            k: v.to_json() for k, v in result['visualizations'].items()
-        }
-
-    print("result 2:....->", result)
-    
-    return str(result)
+    return format_result(result)
 
 
-
-# Final Research Output Tool
-# @tool("final_answer")
-# def final_answer(
-#     introduction: str,
-#     research_steps: str,
-#     main_body: str,
-#     conclusion: str,
-#     sources: list
-# ):
-#     """Returns a natural language response to the user in the form of a research
-#     report. There are several sections to this report, those are:
-#     - `introduction`: a short paragraph introducing the user's question and the
-#     topic we are researching.
-#     - `research_steps`: a few bullet points explaining the steps that were taken
-#     to research your report.
-#     - `main_body`: this is where the bulk of high quality and concise
-#     information that answers the user's question belongs. It is 3-4 paragraphs
-#     long in length.
-#     - `conclusion`: this is a short single paragraph conclusion providing a
-#     concise but sophisticated view on what was found.
-#     - `sources`: a bulletpoint list provided detailed sources for all information
-#     referenced during the research process
-#     """
-#     if type(research_steps) is list:
-#         research_steps = "\n".join([f"- {r}" for r in research_steps])
-#     if type(sources) is list:
-#         sources = "\n".join([f"- {s}" for s in sources])
-#     return ""
 
 @tool("final_answer")
 def final_answer(
     research_steps: str,
     historical_performance: str,
     financial_analysis: str,
-    financial_visualizations: Optional[dict],
+    analysis_type: str,
     industry_insights: str,
     summary: str,
     sources: str
@@ -160,7 +162,7 @@ def final_answer(
 #     to research your report. Format: - Tool Name: step taken  (For each tool step)
     - historical_performance: Detailed Analysis from RAG/vector_search agent. Write at least 2 paragraphs
     - financial_analysis: Write at least 2 paragraphs using previous response and Snowflake agent's financial summary and metrics. Also Display table in markdown format as well for the queries produced (for the columns that have data).If snowflake agent not used then a some sentence from other agents output
-    - financial_visualizations: Plotly figures in the form of json strings from Snowflake_query tool visualization field- it is the json string from the under visualization key in snowflake_query tool
+    - analysis_type: List of analysis types that was outputted from the snowflake tool -> under the Analysis Type heading of its output
     - industry_insights: Detailed Real-time trends from web search agent, Write at least 3 paragraphs
     - summary: A Fully detailed summary of at least 4 big paragraphs using all responses from all tools
     - sources: List of all referenced sources. Give links where possible
@@ -177,7 +179,7 @@ def final_answer(
         "research_steps": research_steps if research_steps else "",
         "historical_performance": historical_performance,
         "financial_analysis": financial_analysis,
-        "financial_visualizations": financial_visualizations,
+        "analysis_type": analysis_type,
         "industry_insights": industry_insights,
         "summary": summary,
         "sources": sources
@@ -200,20 +202,20 @@ def init_research_agent(tool_keys, year=None, quarter=None):
     ## Designing Agent Features and Prompt ##
     system_prompt = f"""You are NVIDIA research agent that has multiple tools available for research and NVIDIA information retrieval.
     Given the user's query you must decide what to do with it based on the
-    list of tools provided to you.
+    list of tools provided to you. If the query is completely irrelevant to NVIDIA, then inform them that It is not relevant.
 
     Context:
     - Year: {year or 'Not specified'}
     - Quarter: {quarter or 'Not specified'}
 
-    Use all the Tools available at least once.
+    Use all the Tools available at least once, but not more than three times.
     If you see that a tool has been used (in the scratchpad) with a particular
     query, do NOT use that same tool with the same query again. Also, do NOT use
     any tool more than twice (ie, if the tool appears in the scratchpad twice, do
     not use it again).
 
-    You should aim to collect information from a diverse range of sources regarding NVIDIA before
-    providing the answer to the user. Once you have collected plenty of information
+    You should aim to collect information from a range of sources regarding NVIDIA before
+    providing the answer to the user. Once you have collected the relevant information
     to answer the user's question (stored in the scratchpad) use the final_answer
     tool."""
 

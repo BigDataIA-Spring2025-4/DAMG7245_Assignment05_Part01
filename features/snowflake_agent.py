@@ -150,47 +150,6 @@ def generate_analysis_summary(df: pd.DataFrame, analysis_type: str) -> str:
     # Use appropriate summary generator or default to financial summary
     return summary_generators.get(analysis_type, summary_generators['financial_summary'])(df)
 
-def create_visualizations(df: pd.DataFrame, analysis_type: str) -> Dict[str, Any]:
-    """
-    Create visualizations based on analysis type
-    
-    Args:
-        df (pd.DataFrame): DataFrame with analysis results
-        analysis_type (str): Type of analysis performed
-    
-    Returns:
-        Dict of Plotly visualizations
-    """
-    visualization_creators = {
-        'stock_performance': lambda df: {
-            'candlestick': go.Figure(data=[go.Candlestick(
-                x=df['DATE'],
-                open=df['OPEN'],
-                high=df['HIGH'],
-                low=df['LOW'],
-                close=df['CLOSE']
-            )]),
-            'volume': px.bar(df, x='DATE', y='VOLUME', title='Trading Volume')
-        },
-        
-        'financial_summary': lambda df: {
-            'revenue': px.line(df, x='DATE', y='TOTAL_REVENUE', title='Total Revenue'),
-            'net_income': px.bar(df, x='DATE', y='NET_INCOME', title='Net Income')
-        },
-        
-        'balance_sheet': lambda df: {
-            'assets': px.line(df, x='DATE', y='TOTAL_ASSETS', title='Total Assets'),
-            'liabilities': px.line(df, x='DATE', y='TOTAL_LIABILITIES_NET_MINORITY_INTEREST', title='Total Liabilities')
-        },
-        
-        'earnings_analysis': lambda df: {
-            'gross_profit': px.line(df, x='DATE', y='GROSS_PROFIT', title='Gross Profit'),
-            'eps': px.line(df, x='DATE', y='DILUTED_EPS', title='Diluted Earnings Per Share')
-        }
-    }
-    
-    # Use appropriate visualization creator or default to financial summary
-    return visualization_creators.get(analysis_type, visualization_creators['financial_summary'])(df)
 
 def snowflake_query_agent(
     query: str = None, 
@@ -232,20 +191,19 @@ def snowflake_query_agent(
         summary = generate_analysis_summary(df, analysis_type)
         
         # Create visualizations
-        visualizations = create_visualizations(df, analysis_type)
-        
+        # visualizations = create_visualizations(df, analysis_type)
+        print("query.....->", sql_query)
         return {
             'data': df.to_dict(orient='records'),
             'summary': summary,
-            'visualizations': visualizations,
-            'query': sql_query
+            'analysis_type': analysis_type
         }
     
     except Exception as e:
         return {
             'error': str(e),
             'detail': 'Failed to query Snowflake database',
-            'query': sql_query if 'sql_query' in locals() else 'N/A'
+            'query': analysis_type
         }
     
     finally:
