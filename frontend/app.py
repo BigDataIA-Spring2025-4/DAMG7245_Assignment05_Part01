@@ -117,9 +117,11 @@ def build_report(output: dict):
         generate_stock_performance_chart(dataframes)
     if "financial_summary" in dataframes:
         generate_financial_summary_chart(dataframes)
-
+    if "balance_sheet" in dataframes:
+        generate_balance_sheet_chart(dataframes)
     
     remaining_report = f"""
+    
     REAL-TIME INDUSTRY INSIGHTS
     ---------------------------
     {output.get("industry_insights", "")}
@@ -282,6 +284,50 @@ def generate_financial_summary_chart2(dataframes):
     fig_eps.update_traces(mode="markers+lines", line=dict(color="green"))
     fig_eps.update_layout(height=300, width=800)
     st.plotly_chart(fig_eps)
+    
+def generate_balance_sheet_chart(dataframes):
+    st.subheader("Balance Sheet Overview")
+
+    # Fetch data
+    df = dataframes.get("balance_sheet", None)
+    if df is None or df.empty:
+        st.warning("No balance sheet data available.")
+        return
+
+    # Ensure DATE is sorted for proper visualization
+    df = df.sort_values(by="DATE")
+
+    # Total Assets vs Total Liabilities (Side-by-Side Bar Chart)
+    st.subheader("Total Assets vs Total Liabilities Over Time")
+    fig_assets_liabilities = px.bar(df, x="DATE", 
+                                    y=["TOTAL_ASSETS", "TOTAL_LIABILITIES_NET_MINORITY_INTEREST"], 
+                                    labels={"value": "Amount ($M)", "DATE": "Date"},
+                                    title="Total Assets vs Total Liabilities",
+                                    barmode="group",  # Side-by-side bars
+                                    color_discrete_map={"TOTAL_ASSETS": "blue", "TOTAL_LIABILITIES_NET_MINORITY_INTEREST": "red"})
+
+    fig_assets_liabilities.update_layout(height=400, width=800, xaxis=dict(tickmode='auto', nticks=10))
+    st.plotly_chart(fig_assets_liabilities)
+
+    # Stockholders' Equity Trend (Line Chart)
+    st.subheader("Stockholders' Equity Over Time")
+    fig_equity = px.line(df, x="DATE", y="STOCKHOLDERS_EQUITY",
+                         labels={"STOCKHOLDERS_EQUITY": "Equity ($M)", "DATE": "Date"},
+                         title="Stockholders' Equity Trend")
+
+    fig_equity.update_traces(mode="markers+lines", line=dict(color="green"))
+    fig_equity.update_layout(height=300, width=800)
+    st.plotly_chart(fig_equity)
+
+    # Working Capital Trend (Bar Chart)
+    st.subheader("Working Capital Over Time")
+    fig_working_capital = px.bar(df, x="DATE", y="WORKING_CAPITAL",
+                                 labels={"WORKING_CAPITAL": "Working Capital ($M)", "DATE": "Date"},
+                                 title="Working Capital Trend",
+                                 color="WORKING_CAPITAL", color_continuous_scale="blues")
+
+    fig_working_capital.update_layout(height=300, width=800, xaxis=dict(tickmode='auto', nticks=10))
+    st.plotly_chart(fig_working_capital)
     
 def main():
     st.set_page_config(page_title="Research NVIDIA", layout="wide", initial_sidebar_state="expanded")
