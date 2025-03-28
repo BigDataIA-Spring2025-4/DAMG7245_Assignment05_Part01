@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
-AIRFLOW_API_URL = os.getenv("AIRFLOW_API_URL")
+# AIRFLOW_API_URL = os.getenv("AIRFLOW_API_URL")
 
 agents = {
     "Snowflake Agent": "snowflake_query",
