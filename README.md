@@ -39,7 +39,7 @@ Video Walkthrough: [Video]()
 - **Pinecone**: Vector Database
 
 ## Application Workflow Diagram
-[Architectural Diagram](https://finance.yahoo.com/quote/NVDA/)
+![image](https://github.com/BigDataIA-Spring2025-4/DAMG7245_Assignment05_Part01/tree/f4b9cab2b2a965c1ad4f15123610b14ed836dfe2/architectural_diagram/Architectural_diagram.png)
 
 
 ### Workflow
