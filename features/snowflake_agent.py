@@ -159,33 +159,43 @@ def create_visualizations(df: pd.DataFrame, analysis_type: str) -> Dict[str, Any
         analysis_type (str): Type of analysis performed
     
     Returns:
-        Dict of Plotly visualizations
+        Dict of base64 encoded visualizations
     """
+    import base64
+    import io
+    
+    def fig_to_base64(fig):
+        """Convert Plotly figure to base64 encoded string"""
+        buf = io.BytesIO()
+        fig.write_image(buf, format="png")
+        buf.seek(0)
+        return base64.b64encode(buf.getvalue()).decode('utf-8')
+    
     visualization_creators = {
         'stock_performance': lambda df: {
-            'candlestick': go.Figure(data=[go.Candlestick(
+            'candlestick': fig_to_base64(go.Figure(data=[go.Candlestick(
                 x=df['DATE'],
                 open=df['OPEN'],
                 high=df['HIGH'],
                 low=df['LOW'],
                 close=df['CLOSE']
-            )]),
-            'volume': px.bar(df, x='DATE', y='VOLUME', title='Trading Volume')
+            )])),
+            'volume': fig_to_base64(px.bar(df, x='DATE', y='VOLUME', title='Trading Volume'))
         },
         
         'financial_summary': lambda df: {
-            'revenue': px.line(df, x='DATE', y='TOTAL_REVENUE', title='Total Revenue'),
-            'net_income': px.bar(df, x='DATE', y='NET_INCOME', title='Net Income')
+            'revenue': fig_to_base64(px.line(df, x='DATE', y='TOTAL_REVENUE', title='Total Revenue')),
+            'net_income': fig_to_base64(px.bar(df, x='DATE', y='NET_INCOME', title='Net Income'))
         },
         
         'balance_sheet': lambda df: {
-            'assets': px.line(df, x='DATE', y='TOTAL_ASSETS', title='Total Assets'),
-            'liabilities': px.line(df, x='DATE', y='TOTAL_LIABILITIES_NET_MINORITY_INTEREST', title='Total Liabilities')
+            'assets': fig_to_base64(px.line(df, x='DATE', y='TOTAL_ASSETS', title='Total Assets')),
+            'liabilities': fig_to_base64(px.line(df, x='DATE', y='TOTAL_LIABILITIES_NET_MINORITY_INTEREST', title='Total Liabilities'))
         },
         
         'earnings_analysis': lambda df: {
-            'gross_profit': px.line(df, x='DATE', y='GROSS_PROFIT', title='Gross Profit'),
-            'eps': px.line(df, x='DATE', y='DILUTED_EPS', title='Diluted Earnings Per Share')
+            'gross_profit': fig_to_base64(px.line(df, x='DATE', y='GROSS_PROFIT', title='Gross Profit')),
+            'eps': fig_to_base64(px.line(df, x='DATE', y='DILUTED_EPS', title='Diluted Earnings Per Share'))
         }
     }
     

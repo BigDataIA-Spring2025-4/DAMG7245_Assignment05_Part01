@@ -3,6 +3,7 @@ from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.messages import BaseMessage
 import operator
 import json
+import plotly.graph_objects as go
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
@@ -82,6 +83,20 @@ def web_search(query: str):
     return contexts
 
 # LangGraph tool integration
+import pandas as pd
+from datetime import datetime
+
+class CustomJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder to handle pandas Timestamp and other non-serializable objects"""
+    def default(self, obj):
+        if isinstance(obj, (pd.Timestamp, datetime)):
+            return obj.isoformat()
+        elif hasattr(obj, 'to_dict'):
+            return obj.to_dict()
+        elif hasattr(obj, '__dict__'):
+            return obj.__dict__
+        return super().default(obj)
+
 @tool("snowflake_query")
 def snowflake_query(
     query: str = None, 
@@ -101,69 +116,39 @@ def snowflake_query(
         quarter=quarter
     )
     
-    # Convert Plotly figures to JSON for transmission
+    # Convert Plotly figures to JSON string representation for each visualization
     if 'visualizations' in result:
         result['visualizations'] = {
-            k: v.to_json() for k, v in result['visualizations'].items()
+            k: fig.to_json() for k, fig in result['visualizations'].items()
         }
-
-    print("result 2:....->", result)
     
+    # Return as a string representation that includes visualization data
     return str(result)
 
-
-
-# Final Research Output Tool
-# @tool("final_answer")
-# def final_answer(
-#     introduction: str,
-#     research_steps: str,
-#     main_body: str,
-#     conclusion: str,
-#     sources: list
-# ):
-#     """Returns a natural language response to the user in the form of a research
-#     report. There are several sections to this report, those are:
-#     - `introduction`: a short paragraph introducing the user's question and the
-#     topic we are researching.
-#     - `research_steps`: a few bullet points explaining the steps that were taken
-#     to research your report.
-#     - `main_body`: this is where the bulk of high quality and concise
-#     information that answers the user's question belongs. It is 3-4 paragraphs
-#     long in length.
-#     - `conclusion`: this is a short single paragraph conclusion providing a
-#     concise but sophisticated view on what was found.
-#     - `sources`: a bulletpoint list provided detailed sources for all information
-#     referenced during the research process
-#     """
-#     if type(research_steps) is list:
-#         research_steps = "\n".join([f"- {r}" for r in research_steps])
-#     if type(sources) is list:
-#         sources = "\n".join([f"- {s}" for s in sources])
-#     return ""
 
 @tool("final_answer")
 def final_answer(
     research_steps: str,
     historical_performance: str,
     financial_analysis: str,
-    financial_visualizations: Optional[dict],
     industry_insights: str,
     summary: str,
-    sources: str
+    sources: str,
+    financial_visualizations: dict = None
 ):
     """
     Returns a comprehensive research report combining data from all agents.
     
     Args:
-    -research_steps: a few bullet points explaining the steps that were taken
-#     to research your report. Format: - Tool Name: step taken  (For each tool step)
+    -research_steps: List points for each step that was taken
+    to research your report. Format: Tool Name: step taken  (For each tool step)
     - historical_performance: Detailed Analysis from RAG/vector_search agent. Write at least 2 paragraphs
-    - financial_analysis: Write at least 2 paragraphs using previous response and Snowflake agent's financial summary and metrics. Also Display table in markdown format as well for the queries produced (for the columns that have data).If snowflake agent not used then a some sentence from other agents output
-    - financial_visualizations: Plotly figures in the form of json strings from Snowflake_query tool visualization field- it is the json string from the under visualization key in snowflake_query tool
-    - industry_insights: Detailed Real-time trends from web search agent, Write at least 3 paragraphs
+    - financial_analysis: 1) Write at least 1 or 2 paragraphs using previous response and Snowflake agent's financial summary and metrics
+                            2)Display table , if possible, in markdown format for the queries produced (for the columns that have data).If snowflake tool not used, then a one sentence from other tool output
+    - financial_visualizations: snowflake_visualizations -> Plotly figures as dict
+    - industry_insights: Detailed Real-time trends from web search agent, Write at least 3 paragraphs, if web search tool not used, then a one sentence from other tool output
     - summary: A Fully detailed summary of at least 4 big paragraphs using all responses from all tools
-    - sources: List of all referenced sources. Give links where possible
+    - sources: If web search tool used, List of all referenced sources. Give links where possible
     
     Returns:
     Structured dictionary with complete research report components
@@ -173,8 +158,12 @@ def final_answer(
     if type(sources) is list:
         sources = "\n".join([f"- {s}" for s in sources])
     
+    # Ensure financial_visualizations is always a dict, never None
+    if financial_visualizations is None:
+        financial_visualizations = {}
+    
     report = {
-        "research_steps": research_steps if research_steps else "",
+        "research_steps": research_steps,
         "historical_performance": historical_performance,
         "financial_analysis": financial_analysis,
         "financial_visualizations": financial_visualizations,
@@ -206,14 +195,14 @@ def init_research_agent(tool_keys, year=None, quarter=None):
     - Year: {year or 'Not specified'}
     - Quarter: {quarter or 'Not specified'}
 
-    Use all the Tools available at least once.
+    Use all the Tools available at least once.But not more than 3 times.
     If you see that a tool has been used (in the scratchpad) with a particular
     query, do NOT use that same tool with the same query again. Also, do NOT use
     any tool more than twice (ie, if the tool appears in the scratchpad twice, do
     not use it again).
 
     You should aim to collect information from a diverse range of sources regarding NVIDIA before
-    providing the answer to the user. Once you have collected plenty of information
+    providing the answer to the user. Once you have collected relevant information
     to answer the user's question (stored in the scratchpad) use the final_answer
     tool."""
 
@@ -258,39 +247,57 @@ def init_research_agent(tool_keys, year=None, quarter=None):
 def run_oracle(state: AgentState, oracle):
     print("run_oracle")
     print(f"intermediate_steps: {state['intermediate_steps']}")
+    
     out = oracle.invoke(state)
     tool_name = out.tool_calls[0]["name"]
     tool_args = out.tool_calls[0]["args"]
+    
+    # Transfer visualization data to final_answer
+    if tool_name == "final_answer":
+        if "snowflake_data" in state and "visualizations" in state["snowflake_data"]:
+            print(f"Adding visualizations to final_answer: {list(state['snowflake_data']['visualizations'].keys())}")
+            tool_args["financial_visualizations"] = state["snowflake_data"]["visualizations"]
+        else:
+            # Ensure the parameter exists even if empty
+            tool_args["financial_visualizations"] = {}
+    
     action_out = AgentAction(
         tool=tool_name,
         tool_input=tool_args,
         log="TBD"
     )
+    
     return {
         **state,
         "intermediate_steps": [action_out]
     }
-
+    
 def router(state: AgentState):
-    # return the tool name to use
-    if isinstance(state["intermediate_steps"], list):
-        return state["intermediate_steps"][-1].tool
-    else:
-        # if we output bad format go to final answer
-        print("Router invalid format")
+    # Add a failsafe for maximum iterations
+    if len(state.get("intermediate_steps", [])) > 10:
+        print("Maximum iterations reached, forcing final_answer")
         return "final_answer"
+    
+    # Return the tool name to use
+    if isinstance(state["intermediate_steps"], list) and state["intermediate_steps"]:
+        if state["intermediate_steps"][-1].tool:
+            return state["intermediate_steps"][-1].tool
+    
+    # Default to final_answer if anything goes wrong
+    print("Router defaulting to final_answer")
+    return "final_answer"
     
 
 
 def run_tool(state: AgentState):
     tool_str_to_func = {
-            "web_search": web_search,
-            "vector_search": vector_search,
-            "snowflake_query": snowflake_query,
-            "final_answer": final_answer
-        }
+        "web_search": web_search,
+        "vector_search": vector_search,
+        "snowflake_query": snowflake_query,
+        "final_answer": final_answer
+    }
     
-    # use this as helper function so we repeat less code
+    # Get tool name and arguments
     tool_name = state["intermediate_steps"][-1].tool
     tool_args = state["intermediate_steps"][-1].tool_input
 
@@ -300,14 +307,63 @@ def run_tool(state: AgentState):
             "year": state.get("year"),
             "quarter": state.get("quarter")
         }
+    
     print(f"{tool_name}.invoke(input={tool_args})")
-    # run tool
+    
+    # Run tool
     out = tool_str_to_func[tool_name].invoke(input=tool_args)
+    
+    # Special handling for snowflake_query
+    if tool_name == "snowflake_query":
+        try:
+            # Convert string to dict if needed
+            if isinstance(out, str):
+                import json
+                import ast
+                
+                # Try to parse the output string
+                try:
+                    # First try json.loads
+                    parsed_out = json.loads(out)
+                except:
+                    try:
+                        # Then try ast.literal_eval
+                        parsed_out = ast.literal_eval(out)
+                    except:
+                        # If both fail, use regex to extract visualizations
+                        import re
+                        
+                        # Initialize empty storage
+                        parsed_out = {"visualizations": {}}
+                        
+                        # Try to find visualization data using regex
+                        viz_match = re.search(r"'visualizations':\s*({.*?})", out, re.DOTALL)
+                        if viz_match:
+                            viz_str = viz_match.group(1)
+                            try:
+                                # Try to parse the visualizations
+                                viz_data = ast.literal_eval(viz_str)
+                                parsed_out["visualizations"] = viz_data
+                            except:
+                                print("Failed to parse visualizations with ast.literal_eval")
+            else:
+                parsed_out = out
+                
+            # Store visualizations in state if found
+            if parsed_out and isinstance(parsed_out, dict) and "visualizations" in parsed_out:
+                if "snowflake_data" not in state:
+                    state["snowflake_data"] = {}
+                
+                state["snowflake_data"]["visualizations"] = parsed_out["visualizations"]
+        except Exception as e:
+            print(f"Error processing visualization data: {e}")
+    
     action_out = AgentAction(
         tool=tool_name,
         tool_input=tool_args,
         log=str(out)
     )
+    
     return {
         **state,
         "intermediate_steps": [action_out]
@@ -323,7 +379,9 @@ def create_graph(research_agent, year=None, quarter=None):
         final_answer
     ]
 
-    graph = StateGraph(AgentState)  # Keep type definition here
+    # Create the graph with a higher recursion limit
+    graph = StateGraph(AgentState)
+    
 
     # Pass state to all functions that require it
     graph.add_node("oracle", partial(run_oracle, oracle=research_agent))
@@ -334,20 +392,22 @@ def create_graph(research_agent, year=None, quarter=None):
 
     graph.set_entry_point("oracle")
 
+    # Add conditional edges
     graph.add_conditional_edges(
         source="oracle",
         path=router,
     )
 
-    # create edges from each tool back to the oracle
+    # Create edges from each tool back to the oracle
     for tool_obj in tools:
         if tool_obj.name != "final_answer":
             graph.add_edge(tool_obj.name, "oracle")
 
-    # if anything goes to final answer, it must then move to END
+    # If anything goes to final answer, it must then move to END
     graph.add_edge("final_answer", END)
 
-    runnable = graph.compile()
+    # Add a timeout
+    runnable = graph.compile()  # Add a 120-second timeout
     return runnable
 
 def run_agents(tool_keys, year=None, quarter=None):

@@ -72,7 +72,7 @@ def main():
                     try:
                         # time.sleep(2)
                         response = requests.post(
-                            f"{API_URL}/query_research_agent",
+                            f"{API_URL}/nvidia-research",
                             json={
                                 "year": year,
                                 "quarter": quarter,
@@ -81,8 +81,8 @@ def main():
                             }
                         )
                         if response.status_code == 200:
-                            answer = response.json()["answer"]
-                            build_report(answer)
+                            answer = response.json()
+                            render_research_results(answer)
                             st.session_state.messages.append({"role": "assistant", "content": answer})
                         else:
                             error_message = f"Error: {response.text}"
@@ -93,40 +93,74 @@ def main():
                         # st.error(error_message)
                         st.session_state.messages.append({"role": "assistant", "content": error_message})
                 # st.write(st.session_state.messages)
-            
-def convert_PDF_to_markdown(file_upload, parser):    
-    progress_bar = st.progress(0)
-    progress_text = st.empty()
+
+
+def render_research_results(result_data):
+    """
+    Render research results in Streamlit
+    """
+    import streamlit as st
     
-    progress_text.text("Uploading file...")
-    progress_bar.progress(20)
+    # Display research components
+    if 'research_steps' in result_data:
+        st.markdown("## Research Steps")
+        st.markdown(result_data['research_steps'])
+    
+    if 'historical_performance' in result_data:
+        st.markdown("## Historical Performance")
+        st.markdown(result_data['historical_performance'])
+    
+    if 'financial_analysis' in result_data:
+        st.markdown("## Financial Analysis")
+        st.markdown(result_data['financial_analysis'])
+    
+    # Render visualizations if available
+    if 'financial_visualizations' in result_data and result_data['financial_visualizations']:
+        render_base64_visualizations(result_data['financial_visualizations'])
+    
+    if 'industry_insights' in result_data:
+        st.markdown("## Industry Insights")
+        st.markdown(result_data['industry_insights'])
+    
+    if 'summary' in result_data:
+        st.markdown("## Summary")
+        st.markdown(result_data['summary'])
+        
+    if 'sources' in result_data:
+        st.markdown("## Sources")
+        st.markdown(result_data['sources'])
 
-    if file_upload is not None:
-        bytes_data = file_upload.read()
-        base64_pdf = base64.b64encode(bytes_data).decode('utf-8')
-        
-        progress_text.text("Sending file for processing...")
-        progress_bar.progress(50)
 
-        response = requests.post(f"{API_URL}/upload_pdf", json={"file": base64_pdf, "file_name": file_upload.name, "parser": parser})
-        
-        progress_text.text("Processing document...")
-        progress_bar.progress(75)
-        
+def render_base64_visualizations(visualization_data):
+    """
+    Render base64 encoded visualizations in Streamlit
+    """
+    import streamlit as st
+    import base64
+    from PIL import Image
+    import io
+    
+    st.markdown("## Financial Visualizations")
+    
+    if not visualization_data:
+        st.info("No visualizations available")
+        return
+    
+    for name, base64_str in visualization_data.items():
         try:
-            if response.status_code == 200:
-                data = response.json()
-                progress_text.text("Finalizing output...")
-                # st.subheader(data["message"])
-                st.success("Document Processed Successfully!")
-                progress_bar.progress(100)
-                progress_text.empty()
-                progress_bar.empty()    
-                return data["file_name"], data["scraped_content"]
-            else:
-                st.error("Server not responding.")
-        except:
-            st.error("An error occurred while processing the PDF.")
+            st.subheader(name.replace('_', ' ').title())
+            
+            # Decode base64 string
+            image_bytes = base64.b64decode(base64_str)
+            
+            # Convert to image and display
+            image = Image.open(io.BytesIO(image_bytes))
+            st.image(image, use_column_width=True)
+            
+        except Exception as e:
+            st.error(f"Error rendering visualization {name}: {str(e)}")
+            st.code(base64_str[:100] + "..." if len(base64_str) > 100 else base64_str)
+
 
 
 def build_report(output: dict):

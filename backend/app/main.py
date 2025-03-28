@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from features.langraph import run_agents
@@ -31,32 +32,34 @@ def read_root():
     return {"message": "NVDIA Financial Reports Analysis: FastAPI Backend with OpenAI Integration available for user queries..."}
 
 
-@app.post("/query_research_agent")
-def query_nvdia_documents(request: NVDIARequest):
+@app.post("/nvidia-research")
+async def nvidia_research(request: dict):
+    query = request.get('query', '')
+    tools = request.get('tools', [])
+    year = request.get('year')
+    quarter = request.get('quarter')
+    
     try:
-        year = request.year
-        quarter = request.quarter
-        query = request.query
-        tools = request.tools
-
-        print("Tools selected are:", tools)
-
+        # Run your agent
         runnable = run_agents(tools, year, quarter)
-        out = runnable.invoke({ 
+        result = runnable.invoke({ 
             "input": query, 
             "chat_history": [], 
             "year": year, 
             "quarter": quarter 
         })
-        print(out)
-        answer = out["intermediate_steps"][-1].tool_input
         
-        return {
-            # "answer": year + quarter[0] + parser + chunk_strategy + vector_store + query,
-            "answer": answer
-        }
+        # Get the final answer
+        answer = result["intermediate_steps"][-1].tool_input
+        
+        # Return the answer (with any visualizations now properly included)
+        return JSONResponse(content=answer)
+    
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error answering question: {str(e)}")
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error: {error_detail}")
+        raise HTTPException(status_code=500, detail=f"Research agent error: {str(e)}")
     
 
 # def build_report(output: dict):
