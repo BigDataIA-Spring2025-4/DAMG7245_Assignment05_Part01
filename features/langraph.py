@@ -2,6 +2,7 @@ from typing import TypedDict, Annotated, Optional, List, Union
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.messages import BaseMessage
 import operator
+import json
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
@@ -18,13 +19,23 @@ import os
 from dotenv import load_dotenv
 
 from features.pinecone_index import query_pinecone
-from features.snowflake_data_pull import snowflake_pandaspull
+from features.snowflake_agent import snowflake_query_agent
 
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 
+
+required_env_vars = {
+    'SNOWFLAKE_ACCOUNT': os.getenv('SNOWFLAKE_ACCOUNT'),
+    'SNOWFLAKE_USER': os.getenv('SNOWFLAKE_USER'),
+    'SNOWFLAKE_PASSWORD': os.getenv('SNOWFLAKE_PASSWORD'),
+    'SNOWFLAKE_ROLE': os.getenv('SNOWFLAKE_ROLE'),
+    'SNOWFLAKE_DB': os.getenv('SNOWFLAKE_DB'),
+    'SNOWFLAKE_WAREHOUSE': os.getenv('SNOWFLAKE_WAREHOUSE'),
+    'SNOWFLAKE_SCHEMA': os.getenv('SNOWFLAKE_SCHEMA')
+}
 
 
 ## Creating the Agent State ##
@@ -69,60 +80,115 @@ def web_search(query: str):
     )
     return contexts
 
+# LangGraph tool integration
+@tool("snowflake_query")
+def snowflake_query(
+    query: str = None, 
+    analysis_type: str = 'financial_summary', 
+    year: str = None, 
+    quarter: List[str] = None
+):
+    """
+    LangGraph compatible Snowflake query tool
+    
+    Args match snowflake_query_agent function
+    """
+    result = snowflake_query_agent(
+        query=query, 
+        analysis_type=analysis_type, 
+        year=year, 
+        quarter=quarter
+    )
+    
+    # Convert Plotly figures to JSON for transmission
+    if 'visualizations' in result:
+        result['visualizations'] = {
+            k: v.to_json() for k, v in result['visualizations'].items()
+        }
 
-@tool("snowflake_agent")
-def snowflake_agent(query: str):
-    """
-    Queries the Snowflake table FRED_DB.FRED_SCHEMA.NVDA_HISTORICAL_5Y.
-    Returns results as a CSV string without any additional formatting or explanation.
-    """
-    result = snowflake_pandaspull(query)
-    if isinstance(result, pd.DataFrame):
-        return result.to_csv(index=False)
-    else:
-        return f"Error: Expected DataFrame but got {type(result)}"
+    print("result 2:....->", result)
+    
+    return str(result)
 
 
 
 # Final Research Output Tool
+# @tool("final_answer")
+# def final_answer(
+#     introduction: str,
+#     research_steps: str,
+#     main_body: str,
+#     conclusion: str,
+#     sources: list
+# ):
+#     """Returns a natural language response to the user in the form of a research
+#     report. There are several sections to this report, those are:
+#     - `introduction`: a short paragraph introducing the user's question and the
+#     topic we are researching.
+#     - `research_steps`: a few bullet points explaining the steps that were taken
+#     to research your report.
+#     - `main_body`: this is where the bulk of high quality and concise
+#     information that answers the user's question belongs. It is 3-4 paragraphs
+#     long in length.
+#     - `conclusion`: this is a short single paragraph conclusion providing a
+#     concise but sophisticated view on what was found.
+#     - `sources`: a bulletpoint list provided detailed sources for all information
+#     referenced during the research process
+#     """
+#     if type(research_steps) is list:
+#         research_steps = "\n".join([f"- {r}" for r in research_steps])
+#     if type(sources) is list:
+#         sources = "\n".join([f"- {s}" for s in sources])
+#     return ""
+
 @tool("final_answer")
 def final_answer(
-    introduction: str,
-    research_steps: list,
-    main_body: str,
-    conclusion: str,
-    snowflake_results : str,
-    sources: list
+    research_steps: str,
+    historical_performance: str,
+    financial_analysis: str,
+    financial_visualizations: Optional[dict],
+    industry_insights: str,
+    summary: str,
+    sources: str
 ):
-    """Returns a natural language response to the user in the form of a research
-    report. There are several sections to this report, those are:
-    - `introduction`: a short paragraph introducing the user's question and the
-    topic we are researching.
-    - `research_steps`: a few bullet points explaining the steps that were taken
-    to research your report.
-    - `main_body`: this is where the bulk of high quality and concise
-    information that answers the user's question belongs. It is 3-4 paragraphs
-    long in length.
-    - `conclusion`: this is a short single paragraph conclusion providing a
-    concise but sophisticated view on what was found.
-    - `snowflake_results`: If you have used snowflake_agent give the output you got from snowflake_pandaspull
-    - `sources`: a bulletpoint list provided detailed sources for all information
-    referenced during the research process
     """
-    return {
-        "introduction": introduction,
-        "research_steps": "\n".join([f"- {r}" for r in research_steps]),
-        "main_body": main_body,
-        "conclusion": conclusion,
-        "snowflake_results": snowflake_results,  # Keep this as raw CSV
-        "sources": "\n".join([f"- {s}" for s in sources])
+    Returns a comprehensive research report combining data from all agents.
+    
+    Args:
+    -research_steps: a few bullet points explaining the steps that were taken
+#     to research your report. Format: - Tool Name: step taken  (For each tool step)
+    - historical_performance: Detailed Analysis from RAG/vector_search agent. Write at least 2 paragraphs
+    - financial_analysis: Write at least 2 paragraphs using previous response and Snowflake agent's financial summary and metrics. Also Display table in markdown format as well for the queries produced (for the columns that have data).If snowflake agent not used then a some sentence from other agents output
+    - financial_visualizations: Plotly figures in the form of json strings from Snowflake_query tool visualization field- it is the json string from the under visualization key in snowflake_query tool
+    - industry_insights: Detailed Real-time trends from web search agent, Write at least 3 paragraphs
+    - summary: A Fully detailed summary of at least 4 big paragraphs using all responses from all tools
+    - sources: List of all referenced sources. Give links where possible
+    
+    Returns:
+    Structured dictionary with complete research report components
+    """
+    if type(research_steps) is list:
+        research_steps = "\n".join([f"- {r}" for r in research_steps])
+    if type(sources) is list:
+        sources = "\n".join([f"- {s}" for s in sources])
+    
+    report = {
+        "research_steps": research_steps if research_steps else "",
+        "historical_performance": historical_performance,
+        "financial_analysis": financial_analysis,
+        "financial_visualizations": financial_visualizations,
+        "industry_insights": industry_insights,
+        "summary": summary,
+        "sources": sources
     }
+    
+    return report
 
 def init_research_agent(tool_keys, year=None, quarter=None):
     tool_str_to_func = {
             "web_search": web_search,
             "vector_search": vector_search,
-            "snowflake_agent": snowflake_agent,
+            "snowflake_query": snowflake_query,
             "final_answer": final_answer
         }
     
@@ -131,7 +197,7 @@ def init_research_agent(tool_keys, year=None, quarter=None):
         tools.append(tool_str_to_func[val])
 
     ## Designing Agent Features and Prompt ##
-    system_prompt = f"""You are the oracle, the great AI decision maker.
+    system_prompt = f"""You are NVIDIA research agent that has multiple tools available for research and NVIDIA information retrieval.
     Given the user's query you must decide what to do with it based on the
     list of tools provided to you.
 
@@ -141,12 +207,13 @@ def init_research_agent(tool_keys, year=None, quarter=None):
     - If you see the agents option "vector_search" selected the highest priority needs to provided to it for generating your final answer.
     - If year or quarter information is given, use that for query even for the "web_search" tool.
 
+    Use all the Tools available at least once.
     If you see that a tool has been used (in the scratchpad) with a particular
     query, do NOT use that same tool with the same query again. Also, use all the tools atleast once but  do NOT use
     any tool more than twice (ie, if the tool appears in the scratchpad twice, do
     not use it again).
 
-    You should aim to collect information from a diverse range of sources before
+    You should aim to collect information from a diverse range of sources regarding NVIDIA before
     providing the answer to the user. Once you have collected plenty of information
     to answer the user's question (stored in the scratchpad) use the final_answer tool."""
 
@@ -219,9 +286,10 @@ def run_tool(state: AgentState):
     tool_str_to_func = {
             "web_search": web_search,
             "vector_search": vector_search,
-            "snowflake_agent": snowflake_agent,
+            "snowflake_query": snowflake_query,
             "final_answer": final_answer
         }
+    
     # use this as helper function so we repeat less code
     tool_name = state["intermediate_steps"][-1].tool
     tool_args = state["intermediate_steps"][-1].tool_input
@@ -250,6 +318,7 @@ def run_tool(state: AgentState):
 def create_graph(research_agent, year=None, quarter=None):
     tools=[
         vector_search,
+        snowflake_query,
         web_search,
         snowflake_agent,
         final_answer
@@ -262,6 +331,7 @@ def create_graph(research_agent, year=None, quarter=None):
     graph.add_node("web_search", run_tool)
     graph.add_node("snowflake_agent",run_tool)
     graph.add_node("vector_search", run_tool)
+    graph.add_node("snowflake_query", run_tool)
     graph.add_node("final_answer", run_tool)
 
     graph.set_entry_point("oracle")

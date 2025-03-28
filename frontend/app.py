@@ -5,6 +5,8 @@ import streamlit as st
 import requests, os, base64
 import pandas as pd
 from io import StringIO
+import plotly.graph_objects as go
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -14,7 +16,7 @@ AIRFLOW_API_URL = os.getenv("AIRFLOW_API_URL")
 API_URL = "http://127.0.0.1:8000"
 
 agents = {
-    "Snowflake Agent": "snowflake_agent",
+    "Snowflake Agent": "snowflake_query",
     "RAG Agent": "vector_search",
     "Web Search Agent": "web_search",
 }
@@ -78,9 +80,7 @@ def main():
                         )
                         if response.status_code == 200:
                             answer = response.json()["answer"]
-                            
-                            # Display the raw returned values from the snowflake_pandaspull agent
-                            st.markdown(answer)
+                            build_report(answer)
                             st.session_state.messages.append({"role": "assistant", "content": answer})
                                 
                         if "snowflake_agent" in selected_agents:
@@ -186,7 +186,65 @@ def convert_PDF_to_markdown(file_upload, parser):
                 st.error("Server not responding.")
         except:
             st.error("An error occurred while processing the PDF.")
+
+
+def build_report(output: dict):
+    research_steps = output.get("research_steps", "")
+    if isinstance(research_steps, list):
+        research_steps = "\n".join([f"- {r}" for r in research_steps])
     
+    sources = output.get("sources", "")
+    if isinstance(sources, list):
+        sources = "\n".join([f"- {s}" for s in sources])
+    
+    report = f"""
+COMPREHENSIVE RESEARCH REPORT
+-----------------------------
+RESEARCH STEPS
+--------------
+{research_steps}
+
+HISTORICAL PERFORMANCE ANALYSIS
+-------------------------------
+{output.get("historical_performance", "")}
+
+FINANCIAL VALUATION METRICS
+---------------------------
+{output.get("financial_analysis", "")}
+
+FINANCIAL VISUALIZATIONS
+------------------------
+"""
+    st.markdown(report)
+    
+    financial_visualizations = output.get("financial_visualizations", {})
+    if financial_visualizations:
+        for title, fig_json_string in financial_visualizations.items():
+            try:
+                fig_json = json.loads(fig_json_string)
+                fig = go.Figure(fig_json)
+                st.subheader(title)
+                st.plotly_chart(fig)
+            except json.JSONDecodeError as e:
+                st.error(f"Error parsing JSON for {title}: {str(e)}")
+            except Exception as e:
+                st.error(f"Error rendering {title}: {str(e)}")
+
+    report = f"""
+REAL-TIME INDUSTRY INSIGHTS
+---------------------------
+{output.get("industry_insights", "")}
+
+SUMMARY
+---------------------------
+{output.get("summary", "")}
+
+SOURCES
+-------
+{output.get("sources", "")}
+"""
+    st.markdown(report)
+
 if __name__ == "__main__":
     st.set_page_config(
         page_title="Research NVDIA",
