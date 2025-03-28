@@ -203,6 +203,7 @@ def init_research_agent(tool_keys, year=None, quarter=None):
     - If a tool has been used with a particular query, do NOT use it again with the same query.
     - Do NOT use any tool more than **twice** (especially `web_search`). If a tool has already been used twice in the scratchpad, avoid using it again.
     - Collect information from a range of sources before providing a final answer.
+    - Do not add bold or italics for any numerical value for the generated report
 
     If you see that a tool has been used (in the scratchpad) with a particular
     query, do NOT use that same tool with the same query again. Also, do NOT use
