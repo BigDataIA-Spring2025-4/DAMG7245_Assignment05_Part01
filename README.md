@@ -39,7 +39,7 @@ Video Walkthrough: [Video]()
 - **Pinecone**: Vector Database
 
 ## Application Workflow Diagram
-TBA
+[Architectural Diagram](https://finance.yahoo.com/quote/NVDA/)
 
 
 ### Workflow
