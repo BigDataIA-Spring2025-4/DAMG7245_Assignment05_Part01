@@ -325,7 +325,6 @@ def create_graph(research_agent, year=None, quarter=None):
         vector_search,
         snowflake_query,
         web_search,
-        snowflake_agent,
         final_answer
     ]
 
