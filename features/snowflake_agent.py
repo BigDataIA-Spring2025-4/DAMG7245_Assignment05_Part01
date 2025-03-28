@@ -2,8 +2,6 @@
 import os
 import pandas as pd
 import snowflake.connector
-import plotly.express as px
-import plotly.graph_objs as go
 from typing import Dict, Any, List
 from io import StringIO
 import re

@@ -158,8 +158,8 @@ def final_answer(
     Returns a comprehensive research report combining data from all agents.
     
     Args:
-    -research_steps: a few bullet points explaining the steps that were taken
-#     to research your report. Format: - Tool Name: step taken  (For each tool step)
+    -research_steps: Bullet points with each point explaining the step that wes taken
+    to research your report. Format: Tool Name: step taken  (For each tool)
     - historical_performance: Detailed Analysis from RAG/vector_search agent. Write at least 2 paragraphs
     - financial_analysis: Write at least 2 paragraphs using previous response and Snowflake agent's financial summary and metrics. Also Display table in markdown format as well for the queries produced (for the columns that have data).If snowflake agent not used then a some sentence from other agents output
     - analysis_type: List of analysis types that was outputted from the snowflake tool -> under the Analysis Type heading of its output
