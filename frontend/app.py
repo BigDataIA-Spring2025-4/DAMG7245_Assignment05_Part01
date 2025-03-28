@@ -83,9 +83,17 @@ def get_df(analysis_type):
     return {key: execute_snowflake_query(query) for key, query in queries.items() if key in analysis_type}
 
 def build_report(output: dict):
-    research_steps = "\n".join([f"- {r}" for r in output.get("research_steps", [])])
-    sources = "\n".join([f"- {s}" for s in output.get("sources", [])])
+    research_steps = output.get("research_steps", "") 
+    if isinstance(research_steps, list): 
+        research_steps = "\n".join([f"- {r}" for r in research_steps]) 
+     
+    sources = output.get("sources", "") 
+    if isinstance(sources, list): 
+        sources = "\n".join([f"- {s}" for s in sources]) 
     
+    # Get the financial query
+    financial_query = output.get("financial_queries", "")
+        
     report = f"""
     COMPREHENSIVE RESEARCH REPORT
     -----------------------------
@@ -105,22 +113,9 @@ def build_report(output: dict):
     
     dataframes = get_df(output.get("analysis_type", ""))
     if "stock_performance" in dataframes:
-        df = dataframes["stock_performance"]
-        st.subheader("Stock Price Performance")
-        st.write(df)
-        
-        fig = go.Figure()
-        fig.add_trace(go.Candlestick(
-            x=df["DATE"],
-            open=df["OPEN"], high=df["HIGH"], low=df["LOW"], close=df["CLOSE"],
-            name="Price"
-        ))
-        fig.update_layout(title="Stock Price Movement", xaxis_title="Date", yaxis_title="Price ($)", xaxis_rangeslider_visible=False)
-        st.plotly_chart(fig)
-        
-        fig_returns = px.bar(df, x="DATE", y="DAILY_RETURN_PERCENT", color=df["DAILY_RETURN_PERCENT"].apply(lambda x: "Positive" if x >= 0 else "Negative"), color_discrete_map={"Positive": "green", "Negative": "red"})
-        st.subheader("Daily Returns (%)")
-        st.plotly_chart(fig_returns)
+        # df = dataframes["stock_performance"]
+        generate_stock_performance_chart(dataframes)
+
     
     remaining_report = f"""
     REAL-TIME INDUSTRY INSIGHTS
@@ -136,6 +131,72 @@ def build_report(output: dict):
     {sources}
     """
     st.markdown(remaining_report)
+
+def generate_stock_performance_chart(dataframes):
+    st.subheader("Stock Price Performance")        
+    df = dataframes.get("stock_performance", "")
+
+    # Extract the necessary columns for plotting
+    chart_data = df[["DATE", "OPEN", "HIGH", "LOW", "CLOSE", "VOLUME", "DAILY_RETURN_PERCENT"]]
+    # Create a price chart
+    fig = go.Figure()
+    
+    # Add candlestick chart
+    fig.add_trace(go.Candlestick(
+        x=chart_data["DATE"],
+        open=chart_data["OPEN"], 
+        high=chart_data["HIGH"],
+        low=chart_data["LOW"], 
+        close=chart_data["CLOSE"],
+        name="Price"
+    ))
+    
+    # Customize the layout
+    fig.update_layout(
+        title="Stock Price Movement",
+        xaxis_title="Date",
+        yaxis_title="Price ($)",
+        xaxis_rangeslider_visible=False,
+        height=500,
+        width=800
+    )
+    
+    # Display the figure
+    st.plotly_chart(fig)
+    
+    # Add a daily returns chart
+    st.subheader("Daily Returns (%)")
+    fig_returns = px.bar(
+        chart_data, 
+        x="DATE", 
+        y="DAILY_RETURN_PERCENT",
+        color=chart_data["DAILY_RETURN_PERCENT"].apply(lambda x: "Positive" if x >= 0 else "Negative"),
+        color_discrete_map={"Positive": "green", "Negative": "red"},
+        labels={"DATE": "Date", "DAILY_RETURN_PERCENT": "Daily Return (%)"}
+    )
+    
+    fig_returns.update_layout(
+        height=300,
+        width=800
+    )
+    
+    st.plotly_chart(fig_returns)
+    
+    # Add volume chart
+    st.subheader("Trading Volume")
+    fig_volume = px.bar(
+        chart_data,
+        x="DATE",
+        y="VOLUME",
+        labels={"DATE": "Date", "VOLUME": "Volume"}
+    )
+    
+    fig_volume.update_layout(
+        height=300,
+        width=800
+    )
+    
+    st.plotly_chart(fig_volume)
 
 def main():
     st.set_page_config(page_title="Research NVIDIA", layout="wide", initial_sidebar_state="expanded")
