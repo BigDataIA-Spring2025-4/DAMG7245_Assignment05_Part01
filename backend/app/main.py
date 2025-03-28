@@ -7,7 +7,6 @@ from features.langraph import run_agents
 from dotenv import load_dotenv
 load_dotenv()
 
-
 from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
 
@@ -28,7 +27,7 @@ client = OpenAI()
 
 @app.get("/")
 def read_root():
-    return {"message": "NVDIA Financial Reports Analysis: FastAPI Backend with OpenAI Integration available for user queries..."}
+    return {"message": "Research NVIDIA With Agentic RAG"}
 
 
 @app.post("/query_research_agent")
