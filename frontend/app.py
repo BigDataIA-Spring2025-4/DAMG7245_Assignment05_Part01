@@ -95,11 +95,12 @@ def build_report(output: dict):
     financial_query = output.get("financial_queries", "")
         
     report = f"""
-    COMPREHENSIVE RESEARCH REPORT
-    -----------------------------
-    RESEARCH STEPS
-    --------------
-    {research_steps}
+    COMPREHENSIVE RESEARCH REPORT:
+    ---------------------------------------------------
+
+    SUMMARY
+    ---------------------------
+    {output.get("summary", "")}
     
     HISTORICAL PERFORMANCE ANALYSIS
     -------------------------------
@@ -127,9 +128,9 @@ def build_report(output: dict):
     ---------------------------
     {output.get("industry_insights", "")}
     
-    SUMMARY
-    ---------------------------
-    {output.get("summary", "")}
+    RESEARCH STEPS
+    --------------
+    {research_steps}
     
     SOURCES
     -------
@@ -308,7 +309,7 @@ def generate_earnings_analysis_chart(dataframes):
                                 labels={"value": "Amount ($M)", "DATE": "Date"},
                                 title="Total Revenue vs Net Income",
                                 barmode="group",  # Side-by-side bars
-                                color_discrete_map={"TOTAL_REVENUE": "blue", "NET_INCOME": "orange"})  
+                                color_discrete_map={"TOTAL_REVENUE": "blue", "NET_INCOME": "green"})  
 
     fig_revenue_income.update_layout(height=400, width=800, xaxis=dict(tickmode='auto', nticks=10))
     st.plotly_chart(fig_revenue_income, key = "revenue_income_earnings_chart", use_container_width=True)
