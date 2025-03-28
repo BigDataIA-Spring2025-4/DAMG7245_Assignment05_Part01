@@ -9,6 +9,7 @@ from langgraph.graph import StateGraph, END
 from langchain_core.tools import tool
 from langchain_core.messages import ToolCall, ToolMessage
 from langchain_openai import ChatOpenAI
+import pandas as pd
 from serpapi import GoogleSearch
 
 from functools import partial
@@ -67,30 +68,19 @@ def web_search(query: str):
         ["\n".join([x["title"], x["snippet"], x["link"]]) for x in results]
     )
     return contexts
+
+
 @tool("snowflake_agent")
 def snowflake_agent(query: str):
     """
-    This agent queries the Snowflake table FRED_DB.FRED_SCHEMA.NVDA_HISTORICAL_5Y.
-    
-    The table schema is:
-      TICKER VARCHAR(10),
-      DATE DATE,
-      OPEN FLOAT,
-      HIGH FLOAT,
-      LOW FLOAT,
-      CLOSE FLOAT,
-      VOLUME FLOAT,
-      DIVIDENDS FLOAT,
-      STOCKSPLITS FLOAT
-
-    The function passes the query parameter directly to snowflake_pandaspull.
-    Provide the extact returned values from the snowflake_pandaspull dont elaborate or add any thing in the provided values.
+    Queries the Snowflake table FRED_DB.FRED_SCHEMA.NVDA_HISTORICAL_5Y.
+    Returns results as a CSV string without any additional formatting or explanation.
     """
-
-    contexts = snowflake_pandaspull(query)
-    
-    # Return the result
-    return contexts
+    result = snowflake_pandaspull(query)
+    if isinstance(result, pd.DataFrame):
+        return result.to_csv(index=False)
+    else:
+        return f"Error: Expected DataFrame but got {type(result)}"
 
 
 
@@ -115,15 +105,18 @@ def final_answer(
     long in length.
     - `conclusion`: this is a short single paragraph conclusion providing a
     concise but sophisticated view on what was found.
-    - `snowflake_results` : If you have used snowflake_agent give the output you got from snowflake_pandaspull
+    - `snowflake_results`: If you have used snowflake_agent give the output you got from snowflake_pandaspull
     - `sources`: a bulletpoint list provided detailed sources for all information
     referenced during the research process
     """
-    if type(research_steps) is list:
-        research_steps = "\n".join([f"- {r}" for r in research_steps])
-    if type(sources) is list:
-        sources = "\n".join([f"- {s}" for s in sources])
-    return ""
+    return {
+        "introduction": introduction,
+        "research_steps": "\n".join([f"- {r}" for r in research_steps]),
+        "main_body": main_body,
+        "conclusion": conclusion,
+        "snowflake_results": snowflake_results,  # Keep this as raw CSV
+        "sources": "\n".join([f"- {s}" for s in sources])
+    }
 
 def init_research_agent(tool_keys, year=None, quarter=None):
     tool_str_to_func = {
