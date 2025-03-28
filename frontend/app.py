@@ -115,6 +115,8 @@ def build_report(output: dict):
     if "stock_performance" in dataframes:
         # df = dataframes["stock_performance"]
         generate_stock_performance_chart(dataframes)
+    if "financial_summary" in dataframes:
+        generate_financial_summary_chart(dataframes)
 
     
     remaining_report = f"""
@@ -198,6 +200,89 @@ def generate_stock_performance_chart(dataframes):
     
     st.plotly_chart(fig_volume)
 
+def generate_financial_summary_chart(dataframes):
+    st.subheader("Financial Summary")
+
+    # Fetch data
+    df = dataframes.get("financial_summary", None)
+    if df is None or df.empty:
+        st.warning("No financial data available.")
+        return
+
+    # Ensure DATE is sorted for proper visualization
+    df = df.sort_values(by="DATE")
+
+    # Revenue and Net Income Side-by-Side Bar Chart
+    st.subheader("Total Revenue & Net Income Over Time")
+    fig_revenue = px.bar(df, x="DATE", y=["TOTAL_REVENUE", "NET_INCOME"], 
+                         labels={"value": "Amount ($M)", "DATE": "Date"},
+                         title="Total Revenue vs Net Income",
+                         barmode="group",  # Side-by-side bars
+                         color_discrete_map={"TOTAL_REVENUE": "blue", "NET_INCOME": "orange"})  
+
+    fig_revenue.update_layout(height=400, width=800, xaxis=dict(tickmode='auto', nticks=10))
+    st.plotly_chart(fig_revenue)
+
+    # EBITDA Plot
+    st.subheader("EBITDA Over Time")
+    fig_ebitda = px.bar(df, x="DATE", y="EBITDA", 
+                        labels={"EBITDA": "EBITDA ($M)", "DATE": "Date"},
+                        title="EBITDA Trend", color="EBITDA", color_continuous_scale="blues")
+
+    fig_ebitda.update_layout(height=300, width=800, xaxis=dict(tickmode='auto', nticks=10))
+    st.plotly_chart(fig_ebitda)
+
+    # EPS Plot
+    st.subheader("Diluted EPS Over Time")
+    fig_eps = px.line(df, x="DATE", y="DILUTED_EPS", 
+                      labels={"DILUTED_EPS": "EPS ($)", "DATE": "Date"},
+                      title="Diluted Earnings Per Share (EPS) Trend")
+
+    fig_eps.update_traces(mode="markers+lines", line=dict(color="green"))
+    fig_eps.update_layout(height=300, width=800)
+    st.plotly_chart(fig_eps)
+    
+def generate_financial_summary_chart2(dataframes):
+    st.subheader("Financial Summary")
+
+    # Fetch data
+    df = dataframes.get("financial_summary", None)
+    if df is None or df.empty:
+        st.warning("No financial data available.")
+        return
+
+    # Ensure DATE is sorted for proper visualization
+    df = df.sort_values(by="DATE")
+
+    # Revenue and Net Income Plot
+    st.subheader("Total Revenue & Net Income Over Time")
+    fig_revenue = px.line(df, x="DATE", y=["TOTAL_REVENUE", "NET_INCOME"], 
+                          labels={"value": "Amount ($M)", "DATE": "Date"},
+                          title="Total Revenue & Net Income Trend")
+
+    fig_revenue.update_traces(mode="markers+lines")
+    fig_revenue.update_layout(height=400, width=800)
+    st.plotly_chart(fig_revenue)
+
+    # EBITDA Plot
+    st.subheader("EBITDA Over Time")
+    fig_ebitda = px.bar(df, x="DATE", y="EBITDA", 
+                        labels={"EBITDA": "EBITDA ($M)", "DATE": "Date"},
+                        title="EBITDA Trend", color="EBITDA", color_continuous_scale="blues")
+
+    fig_ebitda.update_layout(height=300, width=800, xaxis=dict(tickmode='auto', nticks=10))
+    st.plotly_chart(fig_ebitda)
+
+    # EPS Plot
+    st.subheader("Diluted EPS Over Time")
+    fig_eps = px.line(df, x="DATE", y="DILUTED_EPS", 
+                      labels={"DILUTED_EPS": "EPS ($)", "DATE": "Date"},
+                      title="Diluted Earnings Per Share (EPS) Trend")
+
+    fig_eps.update_traces(mode="markers+lines", line=dict(color="green"))
+    fig_eps.update_layout(height=300, width=800)
+    st.plotly_chart(fig_eps)
+    
 def main():
     st.set_page_config(page_title="Research NVIDIA", layout="wide", initial_sidebar_state="expanded")
     st.title("NVIDIA Financial Reports Analysis")
@@ -208,7 +293,8 @@ def main():
     agent_selections = st.sidebar.multiselect('Agents:', list(agents.keys()), default=["Web Search Agent"])
     selected_agents = [agents[key] for key in agent_selections]
     
-    query = st.sidebar.text_input("Enter query here:")
+    st.sidebar.text("Enter your query below:")
+    query = st.sidebar.chat_input("Enter query here:")
     if query:
         st.session_state.messages.clear()
         st.session_state.messages.append({"role": "user", "content": query})
