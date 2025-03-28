@@ -167,7 +167,7 @@ def generate_stock_performance_chart(dataframes):
     )
     
     # Display the figure
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, key = "stock_price_chart", use_container_width=True)
     
     # Add a daily returns chart
     st.subheader("Daily Returns (%)")
@@ -185,7 +185,7 @@ def generate_stock_performance_chart(dataframes):
         width=800
     )
     
-    st.plotly_chart(fig_returns)
+    st.plotly_chart(fig_returns, key = "daily_returns_chart", use_container_width=True)
     
     # Add volume chart
     st.subheader("Trading Volume")
@@ -201,7 +201,7 @@ def generate_stock_performance_chart(dataframes):
         width=800
     )
     
-    st.plotly_chart(fig_volume)
+    st.plotly_chart(fig_volume, key = "volume_chart", use_container_width=True)
 
 def generate_financial_summary_chart(dataframes):
     st.subheader("Financial Summary")
@@ -224,7 +224,7 @@ def generate_financial_summary_chart(dataframes):
                          color_discrete_map={"TOTAL_REVENUE": "blue", "NET_INCOME": "orange"})  
 
     fig_revenue.update_layout(height=400, width=800, xaxis=dict(tickmode='auto', nticks=10))
-    st.plotly_chart(fig_revenue)
+    st.plotly_chart(fig_revenue, key = "revenue_financial_chart", use_container_width=True)
 
     # EBITDA Plot
     st.subheader("EBITDA Over Time")
@@ -233,7 +233,7 @@ def generate_financial_summary_chart(dataframes):
                         title="EBITDA Trend", color="EBITDA", color_continuous_scale="blues")
 
     fig_ebitda.update_layout(height=300, width=800, xaxis=dict(tickmode='auto', nticks=10))
-    st.plotly_chart(fig_ebitda)
+    st.plotly_chart(fig_ebitda, key = "ebitda_financial_chart", use_container_width=True)
 
     # EPS Plot
     st.subheader("Diluted EPS Over Time")
@@ -243,49 +243,8 @@ def generate_financial_summary_chart(dataframes):
 
     fig_eps.update_traces(mode="markers+lines", line=dict(color="green"))
     fig_eps.update_layout(height=300, width=800)
-    st.plotly_chart(fig_eps)
-    
-def generate_financial_summary_chart2(dataframes):
-    st.subheader("Financial Summary")
-
-    # Fetch data
-    df = dataframes.get("financial_summary", None)
-    if df is None or df.empty:
-        st.warning("No financial data available.")
-        return
-
-    # Ensure DATE is sorted for proper visualization
-    df = df.sort_values(by="DATE")
-
-    # Revenue and Net Income Plot
-    st.subheader("Total Revenue & Net Income Over Time")
-    fig_revenue = px.line(df, x="DATE", y=["TOTAL_REVENUE", "NET_INCOME"], 
-                          labels={"value": "Amount ($M)", "DATE": "Date"},
-                          title="Total Revenue & Net Income Trend")
-
-    fig_revenue.update_traces(mode="markers+lines")
-    fig_revenue.update_layout(height=400, width=800)
-    st.plotly_chart(fig_revenue)
-
-    # EBITDA Plot
-    st.subheader("EBITDA Over Time")
-    fig_ebitda = px.bar(df, x="DATE", y="EBITDA", 
-                        labels={"EBITDA": "EBITDA ($M)", "DATE": "Date"},
-                        title="EBITDA Trend", color="EBITDA", color_continuous_scale="blues")
-
-    fig_ebitda.update_layout(height=300, width=800, xaxis=dict(tickmode='auto', nticks=10))
-    st.plotly_chart(fig_ebitda)
-
-    # EPS Plot
-    st.subheader("Diluted EPS Over Time")
-    fig_eps = px.line(df, x="DATE", y="DILUTED_EPS", 
-                      labels={"DILUTED_EPS": "EPS ($)", "DATE": "Date"},
-                      title="Diluted Earnings Per Share (EPS) Trend")
-
-    fig_eps.update_traces(mode="markers+lines", line=dict(color="green"))
-    fig_eps.update_layout(height=300, width=800)
-    st.plotly_chart(fig_eps)
-    
+    st.plotly_chart(fig_eps, key = "eps_financial_chart", use_container_width=True)
+        
 def generate_balance_sheet_chart(dataframes):
     st.subheader("Balance Sheet Overview")
 
@@ -308,7 +267,7 @@ def generate_balance_sheet_chart(dataframes):
                                     color_discrete_map={"TOTAL_ASSETS": "blue", "TOTAL_LIABILITIES_NET_MINORITY_INTEREST": "red"})
 
     fig_assets_liabilities.update_layout(height=400, width=800, xaxis=dict(tickmode='auto', nticks=10))
-    st.plotly_chart(fig_assets_liabilities)
+    st.plotly_chart(fig_assets_liabilities, key = "assets_liabilities_balance_sheet_chart", use_container_width=True)
 
     # Stockholders' Equity Trend (Line Chart)
     st.subheader("Stockholders' Equity Over Time")
@@ -318,7 +277,7 @@ def generate_balance_sheet_chart(dataframes):
 
     fig_equity.update_traces(mode="markers+lines", line=dict(color="green"))
     fig_equity.update_layout(height=300, width=800)
-    st.plotly_chart(fig_equity)
+    st.plotly_chart(fig_equity, key = "equity_balance_sheet_chart", use_container_width=True)
 
     # Working Capital Trend (Bar Chart)
     st.subheader("Working Capital Over Time")
@@ -328,7 +287,7 @@ def generate_balance_sheet_chart(dataframes):
                                  color="WORKING_CAPITAL", color_continuous_scale="blues")
 
     fig_working_capital.update_layout(height=300, width=800, xaxis=dict(tickmode='auto', nticks=10))
-    st.plotly_chart(fig_working_capital)
+    st.plotly_chart(fig_working_capital, key = "working_capital_balance_sheet_chart", use_container_width=True)
     
 def generate_earnings_analysis_chart(dataframes):
     st.subheader("Earnings Analysis")
@@ -352,7 +311,7 @@ def generate_earnings_analysis_chart(dataframes):
                                 color_discrete_map={"TOTAL_REVENUE": "blue", "NET_INCOME": "orange"})  
 
     fig_revenue_income.update_layout(height=400, width=800, xaxis=dict(tickmode='auto', nticks=10))
-    st.plotly_chart(fig_revenue_income)
+    st.plotly_chart(fig_revenue_income, key = "revenue_income_earnings_chart", use_container_width=True)
 
     # EPS (Basic & Diluted) Trend (Line Chart)
     st.subheader("Earnings Per Share (EPS) Over Time")
@@ -362,7 +321,7 @@ def generate_earnings_analysis_chart(dataframes):
 
     fig_eps.update_traces(mode="markers+lines")
     fig_eps.update_layout(height=300, width=800)
-    st.plotly_chart(fig_eps)
+    st.plotly_chart(fig_eps, key = "eps_earnings_chart", use_container_width=True)
 
     # Gross Profit Trend (Bar Chart)
     st.subheader("Gross Profit Over Time")
@@ -372,7 +331,7 @@ def generate_earnings_analysis_chart(dataframes):
                               color="GROSS_PROFIT", color_continuous_scale="greens")
 
     fig_gross_profit.update_layout(height=300, width=800, xaxis=dict(tickmode='auto', nticks=10))
-    st.plotly_chart(fig_gross_profit)
+    st.plotly_chart(fig_gross_profit, key = "gross_profit_earnings_chart", use_container_width=True)
 
 def main():
     st.set_page_config(page_title="Research NVIDIA", layout="wide", initial_sidebar_state="expanded")
