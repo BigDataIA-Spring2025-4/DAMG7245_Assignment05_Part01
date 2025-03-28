@@ -17,7 +17,7 @@ WE ATTEST THAT WE HAVEN’T USED ANY OTHER STUDENTS’ WORK IN OUR ASSIGNMENT AN
 
 ## Resources
 
-Application: [Streamlit Deployment]()
+Application: [Streamlit Deployment](https://nvidia-finrag.streamlit.app/)
 
 Backend API: [Google Cloud Run]()
 
@@ -40,7 +40,7 @@ Video Walkthrough: [Video]()
 
 ## Application Workflow Diagram
 
-![Application Workflow](https://github.com/BigDataIA-Spring2025-4/DAMG7245_Assignment05_Part01/architectural_diagram/Architectural_diagram.png)
+![Application Workflow](/architectural_diagram/Architectural_diagram.png)
 
 
 ### Workflow
