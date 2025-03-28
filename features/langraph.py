@@ -62,8 +62,8 @@ def vector_search(query: str, year: str = None, quarter: list = None):
 
 @tool("web_search")
 def web_search(query: str):
-    """Finds general knowledge information using Google search. Can also be used
-    to augment more 'general' knowledge to a previous specialist query.
+    """Finds general knowledge STRICTLY about nvidia for the latest information using Google search.To add
+    to your knowledgebase about the query. Focus stricitly only on Nvidia.
     """
     # Web Search Tool
     serpapi_params = {
@@ -83,38 +83,28 @@ def web_search(query: str):
 
 
 def format_result(result):
-    # Initialize an empty list to collect parts of the string
+    
     parts = []
     
-    # Handle the 'data' key if present
     if 'data' in result and result['data']:
         parts.append("DATA:")
-        # Loop through each dictionary in the list
         for i, item in enumerate(result['data'], start=1):
             parts.append(f"Record {i}:")
-            # Loop through each key-value pair in the item (keys are dynamic)
             for key, value in item.items():
                 parts.append(f"  {key.title()}: {value}")
-            parts.append("")  # Add a blank line between records
+            parts.append("")  
     
-    # Handle the 'summary' key if present
     if 'summary' in result:
         parts.append("SUMMARY:")
-        # Remove extra whitespace if needed
         summary = result['summary'].strip()
         parts.append(summary)
         parts.append("")
     
-    # Handle the 'query' key if present
     if 'analysis_type' in result:
         parts.append("Analysis Type:")
-        # Remove extra whitespace if needed
         analysis_type = result['analysis_type'].strip()
         parts.append(analysis_type)
-    
-    # Join all parts into one string with newline characters
     return "\n".join(parts)
-# LangGraph tool integration
 
 
 @tool("snowflake_query")
@@ -208,7 +198,7 @@ def init_research_agent(tool_keys, year=None, quarter=None):
     - Year: {year or 'Not specified'}
     - Quarter: {quarter or 'Not specified'}
 
-    Use all the Tools available at least once, but not more than three times.
+    Decice on the Tools usagae base usage based on the parameters, but use no tool more than three times.
     If you see that a tool has been used (in the scratchpad) with a particular
     query, do NOT use that same tool with the same query again. Also, do NOT use
     any tool more than twice (ie, if the tool appears in the scratchpad twice, do
