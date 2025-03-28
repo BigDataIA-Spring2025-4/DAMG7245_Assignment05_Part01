@@ -113,12 +113,13 @@ def build_report(output: dict):
     
     dataframes = get_df(output.get("analysis_type", ""))
     if "stock_performance" in dataframes:
-        # df = dataframes["stock_performance"]
         generate_stock_performance_chart(dataframes)
     if "financial_summary" in dataframes:
         generate_financial_summary_chart(dataframes)
     if "balance_sheet" in dataframes:
         generate_balance_sheet_chart(dataframes)
+    if "earnings_analysis" in dataframes:
+        generate_earnings_analysis_chart(dataframes)
     
     remaining_report = f"""
     
@@ -329,6 +330,50 @@ def generate_balance_sheet_chart(dataframes):
     fig_working_capital.update_layout(height=300, width=800, xaxis=dict(tickmode='auto', nticks=10))
     st.plotly_chart(fig_working_capital)
     
+def generate_earnings_analysis_chart(dataframes):
+    st.subheader("Earnings Analysis")
+
+    # Fetch data
+    df = dataframes.get("earnings_analysis", None)
+    if df is None or df.empty:
+        st.warning("No earnings data available.")
+        return
+
+    # Ensure DATE is sorted for proper visualization
+    df = df.sort_values(by="DATE")
+
+    # Total Revenue vs Net Income (Side-by-Side Bar Chart)
+    st.subheader("Total Revenue vs Net Income Over Time")
+    fig_revenue_income = px.bar(df, x="DATE", 
+                                y=["TOTAL_REVENUE", "NET_INCOME"], 
+                                labels={"value": "Amount ($M)", "DATE": "Date"},
+                                title="Total Revenue vs Net Income",
+                                barmode="group",  # Side-by-side bars
+                                color_discrete_map={"TOTAL_REVENUE": "blue", "NET_INCOME": "orange"})  
+
+    fig_revenue_income.update_layout(height=400, width=800, xaxis=dict(tickmode='auto', nticks=10))
+    st.plotly_chart(fig_revenue_income)
+
+    # EPS (Basic & Diluted) Trend (Line Chart)
+    st.subheader("Earnings Per Share (EPS) Over Time")
+    fig_eps = px.line(df, x="DATE", y=["BASIC_EPS", "DILUTED_EPS"],
+                      labels={"value": "EPS ($)", "DATE": "Date"},
+                      title="Basic EPS vs Diluted EPS Trend")
+
+    fig_eps.update_traces(mode="markers+lines")
+    fig_eps.update_layout(height=300, width=800)
+    st.plotly_chart(fig_eps)
+
+    # Gross Profit Trend (Bar Chart)
+    st.subheader("Gross Profit Over Time")
+    fig_gross_profit = px.bar(df, x="DATE", y="GROSS_PROFIT",
+                              labels={"GROSS_PROFIT": "Gross Profit ($M)", "DATE": "Date"},
+                              title="Gross Profit Trend",
+                              color="GROSS_PROFIT", color_continuous_scale="greens")
+
+    fig_gross_profit.update_layout(height=300, width=800, xaxis=dict(tickmode='auto', nticks=10))
+    st.plotly_chart(fig_gross_profit)
+
 def main():
     st.set_page_config(page_title="Research NVIDIA", layout="wide", initial_sidebar_state="expanded")
     st.title("NVIDIA Financial Reports Analysis")
